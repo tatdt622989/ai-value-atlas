@@ -5,8 +5,8 @@ import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { CatalogSchema,PreferencesSchema,ValuePreferencesSchema } from '../shared/schema';
 import {isFresh,recommend} from '../shared/recommend';
-import { type AtlasStore } from './store';
-import {ProposalSchema,evaluateProposal,publishProposal,editorialReview} from './policy';
+import { type AtlasStore, uid } from './store';
+import {ProposalSchema,evaluateProposal,publishProposal,editorialReview,getField} from './policy';
 import {updateLoop} from './loop';
 import {rankValues} from '../shared/value';
 import {aiReady} from './ai';
@@ -14,7 +14,9 @@ import {aiReady} from './ai';
 export function createApp(store:AtlasStore) {
   const app=new Hono();
   app.use('*',secureHeaders({contentSecurityPolicy:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'",'https://fonts.googleapis.com'],fontSrc:["'self'",'https://fonts.gstatic.com'],imgSrc:["'self'",'data:'],connectSrc:["'self'"],frameAncestors:["'none'"],baseUri:["'self'"]},referrerPolicy:'strict-origin-when-cross-origin'}));
-  app.use('/api/*',bodyLimit({maxSize:256000,onError:c=>c.json({error:'Request too large'},413)}));
+  const smallBody=bodyLimit({maxSize:256000,onError:c=>c.json({error:'Request too large'},413)});
+  app.use('/api/*',async(c,next)=>c.req.path.startsWith('/api/admin/stages')?next():smallBody(c,next));
+  app.use('/api/admin/stages',bodyLimit({maxSize:16_000_000,onError:c=>c.json({error:'Request too large'},413)}));
   app.use('/api/*',async(c,next)=>{c.header('Cache-Control','no-store');await next();});
   app.get('/healthz',async c=>{try{await store.db.command({ping:1});await store.catalog();return c.json({status:'ok'});}catch{return c.json({status:'unavailable'},503);}});
   app.get('/api/v1/catalog',async c=>{
@@ -60,6 +62,30 @@ export function createApp(store:AtlasStore) {
   app.post('/api/admin/proposals/:id/review',async c=>{
     const body=z.object({actor:z.string().min(1),decision:z.enum(['approve','reject','needs-human']),reason:z.string().min(8)}).strict().parse(await c.req.json());
     return c.json(await editorialReview(store,c.req.param('id'),body.actor,body.decision,body.reason));
+  });
+  app.get('/api/admin/stages',async c=>c.json(await store.db.collection('staged_catalogs').find({status:'pending'},{projection:{_id:0,catalog:0}}).limit(100).toArray()));
+  app.post('/api/admin/stages',async c=>{
+    const body=z.object({catalog:z.unknown(),reason:z.string().min(8)}).strict().parse(await c.req.json());
+    const current=await store.catalog(),candidate=CatalogSchema.parse(body.catalog);
+    for(const lock of current.locks)if((!lock.expiresAt||Date.parse(lock.expiresAt)>Date.now())&&JSON.stringify(getField(current,lock.path))!==JSON.stringify(getField(candidate,lock.path)))return c.json({error:`Locked field: ${lock.path}`},409);
+    candidate.locks=current.locks;
+    const id=uid('stage');
+    await store.db.collection('staged_catalogs').insertOne({id,baseVersion:current.version,catalog:candidate,reason:body.reason,status:'pending',createdAt:new Date().toISOString()});
+    return c.json({id,status:'pending',plans:candidate.plans.length,benchmarks:candidate.benchmarks.length},201);
+  });
+  app.post('/api/admin/stages/:id/publish',async c=>{
+    const body=z.object({actor:z.string().min(1)}).strict().parse(await c.req.json());
+    const staged=await store.db.collection('staged_catalogs').findOne({id:c.req.param('id'),status:'pending'});
+    if(!staged)return c.json({error:'Stage not found'},404);
+    if(Date.now()-Date.parse(staged.createdAt)>86400000)return c.json({error:'Stage is older than 24h; re-verify'},400);
+    const current=await store.catalog();
+    if(current.version!==staged.baseVersion)return c.json({error:'Stage base changed; re-stage against current version'},409);
+    const next=CatalogSchema.parse(staged.catalog);
+    for(const lock of current.locks)if((!lock.expiresAt||Date.parse(lock.expiresAt)>Date.now())&&JSON.stringify(getField(current,lock.path))!==JSON.stringify(getField(next,lock.path)))return c.json({error:`Locked field: ${lock.path}`},409);
+    next.locks=current.locks;
+    const published=await store.publish(next,current.version,body.actor,staged.reason??'Manually reviewed structured benchmark import');
+    await store.db.collection('staged_catalogs').updateOne({id:staged.id},{$set:{status:'published',publishedVersion:published.version}});
+    return c.json({version:published.version});
   });
   app.post('/api/admin/update',async c=>{
     // Keep this awaited: server shutdown cannot silently abandon an untracked job.

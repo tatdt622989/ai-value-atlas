@@ -128,10 +128,24 @@ curl -fsS "$ATLAS_BASE_URL/api/v1/value"
 
 ## 同步到線上（atlas.6yuwei.com）
 
-- 線上資料＝Coolify MongoDB 容器 `e12eht8stq9tcotycswxjbqi` 的 `ai_value_atlas`。本機 publish 完不等於線上更新，必須另外搬移：本機 `mongodump --db=ai_value_atlas --archive --gzip` → `scp` 到 `ovh:/tmp` → `docker cp` 進容器 → 容器內 `mongorestore --drop --nsInclude="ai_value_atlas.*"`。
-- 容器內連線用容器自己的 `MONGO_INITDB_ROOT_USERNAME/PASSWORD` 組 URI（`authSource=admin`）。應用 `.env` 的 `MONGODB_URI` 是給服務用的，對容器內 127.0.0.1 直連會 auth 失敗，不要拿它做 restore。
-- 覆蓋前先在遠端 `mongodump` 備份到 `/data/coolify/backups/`；restore 後驗證 `https://atlas.6yuwei.com/api/v1/catalog` 的 version 與目標欄位。/tmp 暫存檔用畢即刪。
-- 前端／程式碼改動走 git push 到 `main`，Coolify webhook 會自動 build 並零停機替換容器；資料搬移不需要重新部署應用。
+**優先走 Admin API，不要 SSH。** 線上已設 `ADMIN_TOKEN`（Coolify env，≥32 字元，與本機 `.env` 同值）。流程：
+
+```bash
+TOKEN=$(grep '^ADMIN_TOKEN=' .env | cut -d= -f2)
+# 1. stage：body = {"catalog": <整包 catalog>, "reason": "…(8+ 字元)"}
+curl -X POST https://atlas.6yuwei.com/api/admin/stages \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  --data-binary @work/stage-body-xxx.json   # 回傳 stage id
+# 2. publish
+curl -X POST https://atlas.6yuwei.com/api/admin/stages/<id>/publish \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"actor":"editor"}'
+# 3. 驗證 /api/v1/catalog 的 version 與目標欄位
+```
+
+- 檢查與 CLI 一致：CatalogSchema、locks、24h stage 時限、baseVersion 衝突。線上 publish 會產生**自己的 version id**（與本機不同，以 catalog 內容為準）。
+- 產生 stage body：`{"catalog": <export 或編輯後的整包 JSON>, "reason": "…"}`。
+- 使用者要求：**不要擅自連正式伺服器（SSH/docker）**。SSH 路徑（mongodump → scp → docker cp → 容器內 mongorestore，root 憑證取容器 `MONGO_INITDB_ROOT_*` env）只在 API 失效且取得明確許可時才用；遠端備份在 `/data/coolify/backups/`。
+- 前端／程式碼改動走 git push 到 `main`，Coolify webhook 會自動 build 並零停機替換容器；資料更新不需要重新部署應用。
 
 ## 更新完成時的回報格式
 

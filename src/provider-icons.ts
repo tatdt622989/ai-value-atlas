@@ -42,5 +42,6 @@ export const providerIcons:Record<string,string>={
   "research-llm-gateway-devpass": "/brand/providers/devpass.llmgateway.io.ico",
   "research-alibaba-model-studio": "/brand/providers/www.alibabacloud.com.webp",
   "research-google-gemini": "/brand/providers/ai.google.dev.png",
-  "deepseek": "/brand/providers/www.deepseek.com.ico"
+  "deepseek": "/brand/providers/www.deepseek.com.ico",
+  "cursor": "/brand/providers/cursor.com.svg"
 };

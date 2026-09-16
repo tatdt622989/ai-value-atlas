@@ -32,6 +32,15 @@ description: 更新 AI Value Atlas 的方案、費率、模型能力與多來源
 - 同套餐的不同模型／尖峰離峰是替代情境，不可相加。年繳需顯示一次付款。免費方案不寫無限倍率。
 - 模型別名只按確切版本人工映射。WebDev 不能改名為 Coding／Frontend。不同榜單、harness、測試版本的原始分數不可混排。
 
+## 換算口徑與常見陷阱
+
+- `research.ratio` 是「官方 API 等值 ÷ 實付現金」，不是「額度 ÷ 月費」。通路費率與官方不同時要先換官方等值：例 CC GOAT 的 Sol 通路價 $5/$30、官方 $4/$20，$70 額度 → 7M tok → 官方等值 $50.4 → ratio 5.04，不是 7。判斷既有條目是否過期前先重算這個口徑，不要把正確值誤當錯誤。
+- `millionTokens` 用通路混合費率（額度 ÷ 80/20 通路價）；`ratio` 用官方等值。兩者除數不同是正常的，不是資料矛盾。
+- `basis: research-estimate` 且 `millionTokens: null` 的條目，查詢時用「multiplier × cash ÷ 該模型官方 USD rateCard 混合價」反推 token 數。模型沒有新鮮的官方 rateCard 時 quote 會是 `missing-comparable-usage`（分數 null、名次顯示「—」）。新增依賴此路徑的研究前，先確認模型有官方 rateCard。
+- 新模型要能進排行需要對應 `benchmarks`（arena/AA）。模型有條目但無榜單資料 → `abilityPercentile` null → 分數 null、名次「—」。新增模型時一併核對榜單快照有沒有它。
+- `isFresh` 要求 `verifiedAt <= now`：寫入當下或未來時間的 verifiedAt 會讓實體被 API 整個過濾掉（曾因此誤判兩次）。verifiedAt 一律用明確已過的時間；`validUntil` 才是未來。
+- 分數公式 `100 × 用量百分位^0.6 × 能力百分位^0.4` 用的是 token 效率（Mtok/$），不是倍率。倍率高的貴模型分數可能仍低；要調權重改 `RANKING_WEIGHTS`（shared/ranking.ts），文件見 docs/RANKING.md。
+
 ## 先讀目前版本
 
 ```sh
@@ -116,6 +125,13 @@ curl -fsS "$ATLAS_BASE_URL/api/v1/value"
 - 加鎖後，來源抓取仍可執行；自動 adapter 保留鎖定的完整 entity，包括舊期限。解除必須明確記錄理由：`pnpm atlas unlock PATH --reason '…' --actor editor`。
 - `pnpm atlas rollback VERSION --reason '…' --actor editor` 會保留原核對日期；若舊版本衝突於目前人工鎖定會拒絕。不要為了 rollback 私自解除鎖。
 - 結束報告分清：已蒐集、已核對、已暫存、已發布、仍待編輯決定。不能把配置好排程描述成 AI 已成功完成整個 loop。
+
+## 同步到線上（atlas.6yuwei.com）
+
+- 線上資料＝Coolify MongoDB 容器 `e12eht8stq9tcotycswxjbqi` 的 `ai_value_atlas`。本機 publish 完不等於線上更新，必須另外搬移：本機 `mongodump --db=ai_value_atlas --archive --gzip` → `scp` 到 `ovh:/tmp` → `docker cp` 進容器 → 容器內 `mongorestore --drop --nsInclude="ai_value_atlas.*"`。
+- 容器內連線用容器自己的 `MONGO_INITDB_ROOT_USERNAME/PASSWORD` 組 URI（`authSource=admin`）。應用 `.env` 的 `MONGODB_URI` 是給服務用的，對容器內 127.0.0.1 直連會 auth 失敗，不要拿它做 restore。
+- 覆蓋前先在遠端 `mongodump` 備份到 `/data/coolify/backups/`；restore 後驗證 `https://atlas.6yuwei.com/api/v1/catalog` 的 version 與目標欄位。/tmp 暫存檔用畢即刪。
+- 前端／程式碼改動走 git push 到 `main`，Coolify webhook 會自動 build 並零停機替換容器；資料搬移不需要重新部署應用。
 
 ## 更新完成時的回報格式
 

@@ -1,0 +1,891 @@
+{
+  "checkedAt": "2026-09-10T15:41:06.567Z",
+  "sourceSnapshot": "2026-09-10",
+  "totalSources": 83,
+  "counts": {
+    "reachable": 77,
+    "unavailable": 6
+  },
+  "results": [
+    {
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:43.214Z",
+      "hash": "581d6c182db19a3a1bb9fc7470c815c01c2419cbbbbb6abbbacd5f42d047bd0a",
+      "relatedPlanIds": [
+        "batch_astra",
+        "batch_sol",
+        "flex_astra",
+        "flex_sol",
+        "official_astra",
+        "official_sol"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:43.595Z",
+      "hash": "0276f8c17e6583e45c6ce8b6cf75adfdaaf1e7eab25d4308d5d9084b0779906e",
+      "relatedPlanIds": [
+        "batch_fable51",
+        "batch_fable5",
+        "batch_opus5",
+        "official_fable51",
+        "official_opus5",
+        "official_fable5"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.alibabacloud.com/help/tc/model-studio/model-pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:43.774Z",
+      "hash": "b02a629997c738341d85394a39fb1623775c3af73407a39949b95dc9ca6f7b19",
+      "relatedPlanIds": [
+        "official_q0902",
+        "official_qmax",
+        "official_q27"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.alibabacloud.com/help/zh/model-studio/qwen3-8-flash",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:43.570Z",
+      "hash": "4f7af4688715c6424687c2430dc85369c543b32b9b084c0a20a58e5a81e46e97",
+      "relatedPlanIds": [
+        "official_qflash"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://platform.moonshot.ai/docs/pricing/chat-k3",
+      "status": "unavailable",
+      "error": "Source URL is outside the approved HTTPS registry",
+      "notes": "Do not refresh source freshness or publish legacy claims."
+    },
+    {
+      "url": "https://dev.meta.ai/docs/pricing-rate-limits/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:45.382Z",
+      "hash": "0e103043c59c50d47620f59fc023bd2f328cbf5c57ca2bcd021a08124d12d113",
+      "relatedPlanIds": [
+        "meta_contrib",
+        "official_muse"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.tencent.com/tencent-releases-and-open-sources-tencent-hy4-preview/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:44.112Z",
+      "hash": "2b88ba16039432318d145c4526524a3615a4030ae7a204e71b4480aa87504885",
+      "relatedPlanIds": [
+        "official_hy4"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://docs.x.ai/developers/models",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:44.487Z",
+      "hash": "63a67e9beb6903802bb5014ada1d6f8dbd890a2d72867581e604c64dc097ba00",
+      "relatedPlanIds": [
+        "official_grok"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://docs.z.ai/guides/overview/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:44.353Z",
+      "hash": "2f425a3f4acfe572de8a20133f6559ab7f2297375c734c1454c6c4828e13b720",
+      "relatedPlanIds": [
+        "oc_glmflash",
+        "official_glm53",
+        "official_glmflash",
+        "official_glm52"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:44.833Z",
+      "hash": "ee92cb185950fda0535b9ffa2fe89313e19299454bc1edc6e3f325df732f190d",
+      "relatedPlanIds": [
+        "batch_gem37",
+        "flex_gem37",
+        "official_gem37"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://r4.codes/",
+      "status": "unavailable",
+      "error": "Source HTTP 403",
+      "notes": "Do not refresh source freshness or publish legacy claims."
+    },
+    {
+      "url": "https://r4.codes/models",
+      "status": "unavailable",
+      "error": "Source HTTP 403",
+      "notes": "Do not refresh source freshness or publish legacy claims."
+    },
+    {
+      "url": "https://r4.codes/docs/rate-limits",
+      "status": "unavailable",
+      "error": "Source HTTP 403",
+      "notes": "Do not refresh source freshness or publish legacy claims."
+    },
+    {
+      "url": "https://docs.z.ai/devpack/overview",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:45.563Z",
+      "hash": "3fcb17f50a0199b7d1666978ce20bf065343e249dd571a953c47e1c31bf93138",
+      "relatedPlanIds": [
+        "zLite_off",
+        "zLite_peak",
+        "zLite_flash",
+        "zPro_off",
+        "zPro_peak",
+        "zPro_flash",
+        "zMax_off",
+        "zMax_peak",
+        "zMax_flash"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://zcode.z.ai/en",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:46.026Z",
+      "hash": "0ce7bfd7788ba68d0b0530298d02aa9d73bd1aaa24e086c8507b75e959f271d0",
+      "relatedPlanIds": [
+        "zLite_off",
+        "zLite_peak",
+        "zPro_off",
+        "zPro_peak",
+        "zMax_off",
+        "zMax_peak"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://docs.z.ai/devpack/notice/event-glm-5.3-flash",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:46.143Z",
+      "hash": "0cdae17c9a185033857e84dbaac33652834d0d931e1ff9bf9031128b6eb040bb",
+      "relatedPlanIds": [
+        "zLite_flash",
+        "zPro_flash",
+        "zMax_flash"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://commandcode.ai/docs/plans/goat",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:47.051Z",
+      "hash": "377877542ce214d28f178f555fd914f86d833bd9e21d4d01efb8ad326aef9649",
+      "relatedPlanIds": [
+        "goat_sol",
+        "goat_glm52",
+        "goat_q27",
+        "goat_glmflash",
+        "goat_qmax",
+        "goat_q0902",
+        "goat_k3",
+        "goat_glm53",
+        "goat_grok",
+        "goat_hy4",
+        "goat_muse",
+        "goat_qflash",
+        "goat_gem37",
+        "goat_contrib"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://commandcode.ai/docs/plans/max",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:46.934Z",
+      "hash": "cbb4de1d7c9fca1b9c6004602be1910bebfc75d68184b8e3b5bce59c10a514d8",
+      "relatedPlanIds": [
+        "cc_Max10x_fable51",
+        "cc_Max10x_fable5",
+        "cc_Max10x_opus5",
+        "cc_Max20x_fable51",
+        "cc_Max20x_fable5",
+        "cc_Max20x_opus5"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://commandcode.ai/docs/plans/pro",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:46.985Z",
+      "hash": "b88b9ff4ecfac5e6c7e1afed69951c7062421c1597260d9b3317b57e67378a14",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://opencode.ai/docs/go/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:46.800Z",
+      "hash": "7902fc30166fef81dcb0e1319edf248e2d8e072f0b9e3be5207edc483e35bd48",
+      "relatedPlanIds": [
+        "oc_glm52",
+        "oc_glm53",
+        "oc_glmflash",
+        "oc_k3",
+        "oc_grok",
+        "oc_qmax",
+        "oc_qflash",
+        "oc_hy4",
+        "oc_contrib"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://developers.cloudflare.com/changelog/post/2026-08-19-gpt-5-6-sol-discount/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:47.676Z",
+      "hash": "a4dadd8ea34a982a92b453bf2af01c80a5de3d934d65b9479820ac9b181c3d56",
+      "relatedPlanIds": [
+        "cf_sol"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://developers.cloudflare.com/ai-gateway/reference/pricing/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:47.557Z",
+      "hash": "a6dc6b18301528f59a76cffc495c8e6fd847b6906b3fd7bdfdfc5ce7959e9d86",
+      "relatedPlanIds": [
+        "cf_sol"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://deepinfra.com/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:47.279Z",
+      "hash": "4fde26dcf664caad501f91d61737b5c95a5cc66f1baf63039b505dedeb0a48fc",
+      "relatedPlanIds": [
+        "deep52",
+        "deepflash",
+        "deepk3"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://deepinfra.com/zai-org/GLM-5.3",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:48.228Z",
+      "hash": "ccfaf4b858a518f0c0ea0e824c1dbb5c976165873486d31dd431c8be9ee4b313",
+      "relatedPlanIds": [
+        "deep53",
+        "deep53flex"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.sanad.dev/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:47.445Z",
+      "hash": "edaf5d78326034eb8a064078607609e71ef7388e047ab43e95fa8533df684c4e",
+      "relatedPlanIds": [
+        "sanad_glm53",
+        "sanad_glm52",
+        "sanad_glmflash",
+        "sanad_q27"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://aigateway.sh/changelog",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:50.477Z",
+      "hash": "775ea332bb29f98aad7f121621b99d61b4b470f7d17f5f546777c0416ee822fe",
+      "relatedPlanIds": [
+        "aig_flash"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://aigateway.sh/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:49.472Z",
+      "hash": "fa1427bc8b3ce259c35ece290ee2bebd2bf59726d48d4a7b62e667c553c1eb1d",
+      "relatedPlanIds": [
+        "aig_flash"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://mixroute.ai/pricing/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:49.100Z",
+      "hash": "e7d9f053009a044a2cc548c932a729fe684b16570e0d20574edbfe5d63e565d7",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://kilo.ai/pricing/kilo-pass",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:49.196Z",
+      "hash": "2f720eaff674a82e9b3759211ce0db5747650c203d7a554249a16b0f4d363242",
+      "relatedPlanIds": [
+        "kilo_astra",
+        "kiloannual_astra",
+        "kilo_fable51",
+        "kiloannual_fable51",
+        "kilo_opus5",
+        "kiloannual_opus5"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://blog.kilo.ai/p/introducing-kilo-pass",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:48.962Z",
+      "hash": "b920d870583a20f0440f5a51d28c288ced3f4437c6550a343806dd7bd523ba27",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://blog.kilo.ai/p/gpt-6-astra-what-we-learned-previewing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:50.526Z",
+      "hash": "444c752012e97f422b49c0b48518f1eb16bf33b628e141e2fd44d4ca18f37e2c",
+      "relatedPlanIds": [
+        "kilo_astra",
+        "kiloannual_astra"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://kilo.ai/models/by/anthropic",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:50.911Z",
+      "hash": "b2c3943e612782bb29cc9f3993c758b7db091666a359b6e6e7d50f1925bd1337",
+      "relatedPlanIds": [
+        "kilo_fable51",
+        "kiloannual_fable51",
+        "kilo_opus5",
+        "kiloannual_opus5"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://cloud.tencent.com/document/product/1823/130060",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:51.314Z",
+      "hash": "25d5f2c428798045a3c5c0194393065f89a6aa97eb12c0b8a49091d64aeb039d",
+      "relatedPlanIds": [
+        "tc52_Lite",
+        "tc52_Standard",
+        "tc52_Pro",
+        "tc52_Max",
+        "tc_glm53",
+        "tc_glmflash",
+        "tc_k3",
+        "tc_hy4"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://cloud.tencent.com/document/product/1823/133811",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:51.292Z",
+      "hash": "3f598e31118cf1ab7c396bea824b8278108b85bc24038e7f718310cceac375e4",
+      "relatedPlanIds": [
+        "tc52_Lite",
+        "tc52_Standard",
+        "tc52_Pro",
+        "tc52_Max",
+        "tc_glm53",
+        "tc_glmflash",
+        "tc_k3",
+        "tc_hy4"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://zenmux.ai/qwen/qwen3.8-max",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:51.461Z",
+      "hash": "9b355a8a4d27014ef0d882c905e1bd946b0dbcf5acd70c5d3ed9de1585651f2d",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://openrouter.ai/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:51.672Z",
+      "hash": "ac663673d0a0f2120d62702425b39481bcae3c61c79f7a04b6b0a429befd231f",
+      "relatedPlanIds": [
+        "or_astra",
+        "or_q0902",
+        "or_contrib"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://vercel.com/docs/ai-gateway/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:53.037Z",
+      "hash": "0840e27db165fc74912b8072e24c33d9a2a0b77d7ff414258137390c3901f8e3",
+      "relatedPlanIds": [
+        "vercel_q27"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://vercel.com/ai-gateway/models/qwen3.8-27b",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:52.097Z",
+      "hash": "e1e1fa9e7238df1ec8c5c0886e348ad4b092d1795aa04dbbfdb97e9554cfa588",
+      "relatedPlanIds": [
+        "vercel_q27",
+        "other_88",
+        "other_89",
+        "other_90"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://vercel.com/ai-gateway/models/glm-5.3",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:52.307Z",
+      "hash": "20f265993f6f95694e97b8e9ca8c758bb331aa373cf8b9f3e7bf56718b1053b5",
+      "relatedPlanIds": [
+        "other_92"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://vercel.com/ai-gateway/models/glm-5.2",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:52.052Z",
+      "hash": "f331dd603b594cfcfec9007da634dd3df62eecb4d7b8c0b73fe4f4808344fe2d",
+      "relatedPlanIds": [
+        "other_86"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://vercel.com/ai-gateway/models/kimi-k3",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:53.534Z",
+      "hash": "222791d9dba1304732910e7844282ae6933d6549cf4e8645ee9fa04015cb85a0",
+      "relatedPlanIds": [
+        "other_91"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://vercel.com/ai-gateway/models/qwen3.8-max-0902",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:53.441Z",
+      "hash": "88b8f041e83d634649d0e0d93bfcadd39e5adadbec3e7d345b839c701400101a",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://runinfra.ai/inference-api",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:53.672Z",
+      "hash": "651d173d6e31cec7f137584655f3126c8f70468d5b7e3c8b0448004cd7492bfe",
+      "relatedPlanIds": [
+        "run_q27",
+        "run_flash"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://runinfra.ai/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:53.644Z",
+      "hash": "0b663893e881e4feb6ee13130f180fd1f27e17fc1dd725fbf7d6c8147d40626b",
+      "relatedPlanIds": [
+        "run_q27",
+        "run_flash"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://wise.com/gb/currency-converter/usd-to-cny-rate/history",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:53.817Z",
+      "hash": "367b64d9bddc9cf338ab0833e8dca09627847423d8be9357c4a73bd0bb8bb6db",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://docs.bankofai.io/llmservice/promotions-and-pricing-notices/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:54.668Z",
+      "hash": "7af08de887379d0d3561a893818ecaecb1c1fc43ac08fb0441840c616301f4f1",
+      "relatedPlanIds": [
+        "bai_glm52",
+        "bai_glm53"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://docs.bankofai.io/llmservice/pricing-and-usage/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:54.845Z",
+      "hash": "ad909050d84e3b40e21fb772296d92c64c4784e2b9668f8695474c82fda96767",
+      "relatedPlanIds": [
+        "bai_glm52",
+        "bai_glm53",
+        "bai_q27"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.cheaperinference.com/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:54.199Z",
+      "hash": "816d01eb3de74c47230c5a8d399dbc731c4da8078fa992dcce8bb14881630c29",
+      "relatedPlanIds": [
+        "cheap_glmflash",
+        "cheap_glm53",
+        "cheap_sol",
+        "cheap_fable51"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.cheaperinference.com/models/glm-5.3",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:55.088Z",
+      "hash": "3ac32d045ed508422073da483dee928b3b4fb603d42b15c637032c80215db436",
+      "relatedPlanIds": [
+        "cheap_glm53"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.cheaperinference.com/models/gpt-5.6-sol",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:55.050Z",
+      "hash": "60f350ea46d14f6f9829cd130696532457709b45ec91a71d10503183b368ca39",
+      "relatedPlanIds": [
+        "cheap_sol"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.cheaperinference.com/models/claude-fable-5.1",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:55.632Z",
+      "hash": "390d8bbd5c60f38a2dac465c7a27977dd042f13d58174cead42aa5b1416b7983",
+      "relatedPlanIds": [
+        "cheap_fable51"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://akashml.com/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:56.352Z",
+      "hash": "d4f08792cd8d6dc55779e49bb44b38a0569eb8509716ad66022824ae0a1ba54c",
+      "relatedPlanIds": [
+        "akash_q27",
+        "akash_glm53"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://support.telnyx.com/en/articles/14327893-telnyx-pretrial-accounts",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:56.305Z",
+      "hash": "79c10d52e5710e3c9a6a4521237a6cba64988934bc034fe37f550185114513c3",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://telnyx.com/release-notes/glm-5-3-flash-inference",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:59.782Z",
+      "hash": "943312dc8592769103518a190e02af6f6674e60f1a308810fe19a6e1f8291192",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://nebius.com/builders-terms-and-conditions",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:40:57.386Z",
+      "hash": "c5d3ea634771313c0ad153affc98f8dfec641ca9c6a12381b690401b0d464e37",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://portal.neuralwatt.com/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:01.091Z",
+      "hash": "877f52519b0968845459eda1254ec13d4246bfbd042169fd901d670efe71cb26",
+      "relatedPlanIds": [
+        "neural_glm53",
+        "neural_glm52"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.requesty.ai/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:00.047Z",
+      "hash": "49ee323886ed616a89ebee1915bcc1e33fbd6d8a2e5f6a0c67ee7a344d3a0e71",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://ofox.ai/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:00.690Z",
+      "hash": "be44ef63ac40740c95a7d62da84b9d298f8bc0d9345e63947b67d0c17d32f6c7",
+      "relatedPlanIds": [
+        "ofox_glm53",
+        "ofox_sol",
+        "ofox_gem37"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://gptproto.com/model/openai/gpt-6-astra",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:01.256Z",
+      "hash": "0e094c24e63d3e2e9ee87e1f31d3a78070266154193ef4dc696ecc100aaa8a19",
+      "relatedPlanIds": [
+        "gptproto_astra",
+        "gptproto_fable51",
+        "gptproto_q0902",
+        "gptproto_glm53",
+        "gptproto_gem37",
+        "gptproto_opus5",
+        "gptproto_k3",
+        "gptproto_sol"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://gptproto.com/model/grok/grok-4.6",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:01.008Z",
+      "hash": "650d3b54f95180b3d77abebdf9fd1e22b4e1a2b3fac35f424719775a1b159877",
+      "relatedPlanIds": [
+        "gptproto_grok"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.tokenrouter.com/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:02.137Z",
+      "hash": "6b12473fb32d8bcc83b4069c1f3afcc771514a98240de4cf986f75e87ad50d34",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.orcarouter.ai/offers",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:01.910Z",
+      "hash": "0376dea1510bff3153d447f552937f222d953bd07edfa19d99c3de81a5bfc95d",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://docs.fastrouter.ai/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:01.836Z",
+      "hash": "6ecba6b2de463b87ae5eff980023bdb783683f2132ab1d9c9c98a63624d2057a",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://llmgateway.io/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:01.939Z",
+      "hash": "bff865ae62fff1286d2f8e59d86b0b2dc49a328ebf106431e39c576d179ec90f",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://devpass.llmgateway.io/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:01.994Z",
+      "hash": "020746fd507dd3121de1a1f19594d895f8cfa6a0ecac9b5ea188d65bd37d3512",
+      "relatedPlanIds": [
+        "devpass_Lite_flash",
+        "devpass_Pro_flash",
+        "devpass_Max_flash"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://docs.runchat.com/concepts/models/credits",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:03.136Z",
+      "hash": "16ff4b5c608fd49ff197d624565a1d78880bfad265c8be679513d9390690677c",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://ollama.com/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:03.338Z",
+      "hash": "e6c6aa6438e3e6c113871a21e95f390a98c0558877d1b2d1fb803223488a2ee0",
+      "relatedPlanIds": [
+        "ollama_Pro_glm53",
+        "ollama_Pro_glm52",
+        "ollama_Pro_glmflash",
+        "ollama_Pro_k3",
+        "ollama_Max_glm53",
+        "ollama_Max_glm52",
+        "ollama_Max_glmflash",
+        "ollama_Max_k3",
+        "ollama_Pro_年繳_glm53",
+        "ollama_Pro_年繳_glm52",
+        "ollama_Pro_年繳_glmflash",
+        "ollama_Pro_年繳_k3"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://huggingface.co/docs/inference-providers/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:02.587Z",
+      "hash": "1d0b11470f919ff8f5f0a42dba2ebb8c0669bb0dced364eb0d5488296442cd85",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://www.cerebras.ai/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:03.088Z",
+      "hash": "db10092e45a5883e68af6b0121bb78ff199875b8fa4d8ddfc9c37345d9fbd07c",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://groq.com/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:02.511Z",
+      "hash": "46086b9ee2de212b437e5572a6de22a3e7ffa6dc367f4cde4851f299d7d239a4",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://novita.ai/",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:04.560Z",
+      "hash": "c854ea585fe3a4f36d2d8f02cede9a5bae15f28719d28e4074ccbeb9116d7443",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://app.umans.ai/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:04.789Z",
+      "hash": "1d823b33dd6e8af57ceba4b1bc39dad40ea99ec8140777d2a8117a37c43f15a2",
+      "relatedPlanIds": [
+        "umans_glm53",
+        "umans_glmflash",
+        "umans_k3"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://commandcode.ai/docs/resources/pricing-limits",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:05.024Z",
+      "hash": "caadb8308b14c3bbad1aa2a9459676a7147686c4bfe39e58542647954549aeee",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://deepinfra.com/zai-org/GLM-5.2",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:03.937Z",
+      "hash": "a08452d54fb8d8f52e0bc09229bac04f6d5ca6851062848b2483094f0f057203",
+      "relatedPlanIds": [
+        "deep52",
+        "deep52flex"
+      ],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://deepinfra.com/zai-org/GLM-5.3-Flash",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:03.962Z",
+      "hash": "2315173aa139296893d362bc4519c8c9acf9bf6679f54e8bfcf8d89c1ea5d293",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://chatgpt.com/codex/pricing/",
+      "status": "unavailable",
+      "error": "Source HTTP 403",
+      "notes": "Do not refresh source freshness or publish legacy claims."
+    },
+    {
+      "url": "https://learn.chatgpt.com/docs/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:05.264Z",
+      "hash": "1647091ec87d3e2d8b22438bb7345961c2eb7e424836b0674a8c157c3090fd7b",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://help.openai.com/en/articles/9793128-what-is-chatgpt-pro",
+      "status": "unavailable",
+      "error": "Source HTTP 403",
+      "notes": "Do not refresh source freshness or publish legacy claims."
+    },
+    {
+      "url": "https://claude.com/pricing",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:05.516Z",
+      "hash": "a2ef5b15efa81b8869c9649e1cfae950c864bb0a5149985321a5004497afbf07",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://support.claude.com/en/articles/8325606-what-is-the-pro-plan",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:05.807Z",
+      "hash": "385924d0dee28badf338cfbd1e00049956bbcf38a6a94c8fedf733b88b5034a7",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://support.claude.com/en/articles/11049741-what-is-the-max-plan",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:06.554Z",
+      "hash": "30df0219ac92206c41f4ff6141020c212663e7eaa12ca092a73433dc05e79ff6",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-or-max-plan",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:06.526Z",
+      "hash": "cb3f683adf954d2fb13fe8c9179d9a5576693a4be83a92ae5598a51f77bde384",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    },
+    {
+      "url": "https://support.claude.com/en/articles/15424964-claude-fable-models-on-your-plan",
+      "status": "reachable-unreviewed",
+      "fetchedAt": "2026-09-10T15:41:06.567Z",
+      "hash": "b2d07a481f3693bbe2c06f9ba8fd18de41c46f7f86a0cb8b2359f24c77fbebc0",
+      "relatedPlanIds": [],
+      "notes": "Source reachable. Prices, units, eligibility and time windows still require claim-level review; reachability is not verification."
+    }
+  ]
+}

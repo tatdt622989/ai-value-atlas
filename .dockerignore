@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-server
+.git
+.env
+.env.*
+!.env.example
+work
+coverage
+.DS_Store
+.agents
+.codex
+.qoder
+.playwright-cli

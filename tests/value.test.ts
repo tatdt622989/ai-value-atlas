@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {CatalogSchema,ValuePreferencesSchema} from '../shared/schema';
 import {planMatchesQuery,rankValues,valueQuote} from '../shared/value';
-import {latestVerifiedAt} from '../shared/recommend';
+import {latestVerifiedAt,freshnessAudit} from '../shared/recommend';
 import {sourcesUnchanged} from '../server/value-sources';
 const seed=CatalogSchema.parse(JSON.parse(fs.readFileSync('data/catalog.json','utf8')));
 const now=new Date('2026-09-11T00:00:00Z');
@@ -114,4 +114,20 @@ test('topbar verification date reports the newest verification, not the oldest r
  for(const plan of data.plans){plan.freshness.verifiedAt='2026-09-16T15:00:00.000Z';plan.freshness.validUntil='2026-09-18T15:00:00.000Z';}
  assert.equal(latestVerifiedAt(data),'2026-09-16T15:00:00.000Z');
  assert.equal(latestVerifiedAt({...seed,plans:[],rateCards:[],offers:[],research:[],benchmarks:[]}),null);
+});
+test('freshness audit separates live gaps from plans that legitimately ended',()=>{
+ const audit=freshnessAudit(seed,now);
+ assert.equal(audit.complete,true);assert.deepEqual(audit.gaps,[]);
+ assert.equal(audit.collections.plans.total,seed.plans.length);
+ assert.equal(audit.latestVerifiedAt,latestVerifiedAt(seed));
+ const data=structuredClone(seed);
+ const plan=data.plans.find(p=>p.availability==='public')!;
+ plan.freshness.validUntil='2026-09-10T23:59:59.000Z';
+ const lapsed=freshnessAudit(data,now);
+ assert.equal(lapsed.complete,false);
+ assert.ok(lapsed.gaps.some(g=>g.collection==='plans'&&g.id===plan.id));
+ assert.equal(lapsed.collections.plans.stale,1);
+ plan.availability='ended';
+ const ended=freshnessAudit(data,now);
+ assert.equal(ended.complete,true);assert.ok(ended.retired.some(r=>r.id===plan.id));
 });

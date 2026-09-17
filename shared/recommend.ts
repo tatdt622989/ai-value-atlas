@@ -12,6 +12,38 @@ export function latestVerifiedAt(catalog: Catalog): string | null {
     .map(item => item.freshness.verifiedAt).sort();
   return dates.at(-1) ?? null;
 }
+export type FreshnessEntry = {
+  collection: 'plans'|'rateCards'|'offers'|'research'|'benchmarks'; id: string; label: string;
+  availability: string|null; verifiedAt: string; validUntil: string; status: string; fresh: boolean;
+};
+// Completeness of one published catalog: what the topbar badge reports, which
+// entities fell out of their window, and which retire on their own.
+export function freshnessAudit(catalog: Catalog, now = new Date()) {
+  const plans = new Map(catalog.plans.map(p=>[p.id,p]));
+  const row = (collection: FreshnessEntry['collection'], item: {id:string;label:string;freshness:Plan['freshness'];availability:string|null}): FreshnessEntry =>
+    ({collection,id:item.id,label:item.label,availability:item.availability,verifiedAt:item.freshness.verifiedAt,
+      validUntil:item.freshness.validUntil,status:item.freshness.status,fresh:isFresh(item.freshness,now)});
+  const entries = [
+    ...catalog.plans.map(p=>row('plans',{id:p.id,label:p.name,freshness:p.freshness,availability:p.availability})),
+    ...catalog.rateCards.map(r=>row('rateCards',{id:r.id,label:r.id,freshness:r.freshness,availability:null})),
+    ...catalog.offers.map(o=>row('offers',{id:o.id,label:o.label,freshness:o.freshness,availability:plans.get(o.planId)?.availability??null})),
+    ...catalog.research.map(r=>row('research',{id:r.id,label:r.label,freshness:r.freshness,availability:plans.get(r.planId)?.availability??null})),
+    ...catalog.benchmarks.map(b=>row('benchmarks',{id:b.id,label:`${b.modelId} ${b.category}`,freshness:b.freshness,availability:null})),
+  ];
+  const collections = Object.fromEntries((['plans','rateCards','offers','research','benchmarks'] as const).map(name=>{
+    const group = entries.filter(e=>e.collection===name);
+    return [name,{total:group.length,fresh:group.filter(e=>e.fresh).length,stale:group.filter(e=>!e.fresh).length,
+      expiringIn24h:group.filter(e=>e.fresh&&Date.parse(e.validUntil)-now.getTime()<86400000).length}];
+  }));
+  const stale = entries.filter(e=>!e.fresh);
+  // Ended plans may legitimately expire; anything still on offer must not fall out of its window.
+  const gaps = stale.filter(e=>e.availability!=='ended');
+  const latest = latestVerifiedAt(catalog);
+  const latestEntry = entries.find(e=>e.verifiedAt===latest);
+  return {version:catalog.version,publishedAt:catalog.publishedAt,latestVerifiedAt:latest,
+    latestVerifiedEntity:latestEntry?`/${latestEntry.collection}/${latestEntry.id}`:null,
+    collections,gaps,retired:stale.filter(e=>e.availability==='ended'),complete:gaps.length===0};
+}
 export function monthlyCost(p: Plan, prefs: Preferences): number | null {
   let amount = p.billing.amount;
   if (p.kind === 'api') {

@@ -3,20 +3,36 @@ import {connectStore,hash,uid} from './store';
 import {CatalogSchema} from '../shared/schema';
 import {ProposalSchema,evaluateProposal,publishProposal,getField,editorialReview} from './policy';
 import {updateLoop} from './loop';
+import {freshnessAudit} from '../shared/recommend';
 
 const [command,...args]=process.argv.slice(2);
 if(!command||command==='help'){
-  console.log('atlas seed | status | export <file> | import-legacy <html> | update | proposals | source-reviews | discoveries | stages | show-stage <id> <file> | submit <proposal.json> | check <id> | publish <id> --actor <name> --manual [--lock] | stage <catalog.json> --reason <text> | publish-stage <id> --actor <name> | unlock <path> --reason <text> --actor <name> | rollback <version> --reason <text> --actor <name>');
+  console.log('atlas seed | status | freshness [catalog.json] [--strict] | export <file> | import-legacy <html> | update | proposals | source-reviews | discoveries | stages | show-stage <id> <file> | submit <proposal.json> | check <id> | publish <id> --actor <name> --manual [--lock] | stage <catalog.json> --reason <text> | publish-stage <id> --actor <name> | unlock <path> --reason <text> --actor <name> | rollback <version> --reason <text> --actor <name>');
   process.exit(0);
 }
 const option=(key:string)=>{const i=args.indexOf(key);return i>=0?args[i+1]:undefined;};
 const actor=option('--actor');const reason=option('--reason');
+// A catalog file can be audited without MongoDB; without one the published version is read below.
+const auditFile=command==='freshness'?args.find(a=>!a.startsWith('--')):undefined;
+if(auditFile){
+  const audit=freshnessAudit(CatalogSchema.parse(JSON.parse(await fs.readFile(auditFile,'utf8'))));
+  console.log(JSON.stringify(audit,null,2));
+  if(args.includes('--strict')&&!audit.complete)process.exitCode=1;
+  process.exit();
+}
 const store=await connectStore();
 try {
   let result:unknown;
   switch(command){
     case 'seed': result=await store.seed(CatalogSchema.parse(JSON.parse(await fs.readFile(new URL('../data/catalog.json',import.meta.url),'utf8'))));break;
     case 'status':{const cat=await store.catalog();result={version:cat.version,plans:cat.plans.length,benchmarks:cat.benchmarks.length,locks:cat.locks,lastRun:await store.db.collection('runs').findOne({}, {sort:{startedAt:-1},projection:{_id:0}})};break;}
+    case 'freshness':{
+      const audit=freshnessAudit(await store.catalog());
+      result=audit;
+      // --strict fails the run so a partial update cannot be reported as complete.
+      if(args.includes('--strict')&&!audit.complete)process.exitCode=1;
+      break;
+    }
     case 'export':await fs.writeFile(args[0],JSON.stringify(await store.catalog(),null,2));result={path:args[0]};break;
     case 'import-legacy':{
       const text=await fs.readFile(args[0],'utf8');const match=text.match(/<script\s+id="data"\s+type="application\/json">([\s\S]*?)<\/script>/);if(!match)throw new Error('Embedded JSON not found');

@@ -16,11 +16,11 @@ description: 更新 AI Value Atlas 的方案、費率、模型能力與多來源
 
 ## 更新網站資料的固定流程
 
-1. 先讀目前發布版本，確認 version、最近一次 lastRun、待審 proposals、待審 stages 和來源差異。若 Mongo 連不上，停止在診斷，不要 seed、覆蓋或宣稱已更新。
+1. 先讀目前發布版本，確認 version、最近一次 lastRun、待審 proposals、待審 stages、來源差異和 `pnpm atlas freshness` 的 gaps。若 Mongo 連不上，停止在診斷，不要 seed、覆蓋或宣稱已更新。
 2. 取得來源並記錄證據。逐一確認官方價格／條款、模型路由、額度、付款週期、活動日期、能力榜單分類、測試版本與抓取時間；來源失敗要保留原值並明確列出失敗來源。
 3. 只把「已核對且有證據支持」的改動放進 proposal 或完整 catalog stage。保留原始 research、sourceSamples、權重、範圍、信度和日期；新的研究取捨不能用整份 AI 輸出直接覆蓋。
 4. 實際閱讀差異，確認原值、擬改值、證據、有效期與對排行的影響，再發布。staged_catalogs 或 proposals 出現不代表網站已更新。
-5. 發布後重新查 Mongo status、公開 API 和網站畫面；至少確認發布版本、目標欄位和資料狀態一致。用背景瀏覽器重新載入實際服務，分別以方案名、模型名或通路名搜尋，確認結果列、詳情與來源連結真的可見。沒有可靠用量、不能計算倍率的方案，也必須能被搜尋到並在「尚無可靠倍率」區顯示，不可只存在資料庫。報告要分開寫「已蒐集、已核對、已暫存、已發布、已驗證」。
+5. 發布後重新查 Mongo status、公開 API 和網站畫面；至少確認發布版本、目標欄位和資料狀態一致。再跑一次 `pnpm atlas freshness --strict`（本機）並對發布後的 catalog 跑 `pnpm atlas freshness work/catalog-published.json --strict`：`complete` 必須為 true，否則每一筆 gap 都要說明是漏抓、待編輯決定或已改為 ended。頂欄「資料核驗」日期來自全站最新 verifiedAt，發布後應自動前進；沒有前進就代表這輪沒有任何實體的 verifiedAt 被更新，不能宣稱資料已更新。用背景瀏覽器重新載入實際服務，分別以方案名、模型名或通路名搜尋，確認結果列、詳情與來源連結真的可見。沒有可靠用量、不能計算倍率的方案，也必須能被搜尋到並在「尚無可靠倍率」區顯示，不可只存在資料庫。報告要分開寫「已蒐集、已核對、已暫存、已發布、已驗證」。
 
 ## 不可遺失的資料語意
 
@@ -45,6 +45,7 @@ description: 更新 AI Value Atlas 的方案、費率、模型能力與多來源
 
 ```sh
 pnpm atlas status
+pnpm atlas freshness
 pnpm atlas export work/catalog-before.json
 pnpm atlas proposals
 pnpm atlas stages
@@ -52,6 +53,8 @@ pnpm atlas source-reviews
 ```
 
 先看 status 的 version、lastRun.status、lastRun.failures 和 lastRun.notes，再看 proposals、stages 與 source-reviews。必要時讀 shared/schema.ts、shared/value.ts、server/app.ts 和 docs/DATA-MODEL.md，不用載入整個原始 HTML。MONGODB_URI、AI key 等只從 .env 讀取，不列印、不寫入提案或文件。
+
+`pnpm atlas freshness` 是每次更新前後都必須看的完整性稽核：它回報網站頂欄顯示的核驗日（`latestVerifiedAt`，全站最新 verifiedAt）、各集合 fresh／stale／24 小時內到期數，以及兩份清單。`gaps` 是仍在架上卻已掉出有效期的實體（含所屬 plan 的 availability），必須是 0；不是 0 時每一筆都要有處理決定（重新核驗續期、改為 ended、或明確列為待編輯決定）。`retired` 是 availability 為 ended、可以自然過期的實體，不需續期但要確認真的是結束而不是漏抓。
 
 若已有服務在運行，先確認實際 port，再用唯讀方式驗證。以下的 4319 只是範例，不是固定值：
 
@@ -113,9 +116,19 @@ publish-stage 會檢查 stage 年齡、base version 和人工鎖，但不會替 
 ```sh
 pnpm atlas status
 pnpm atlas export work/catalog-published.json
+pnpm atlas freshness work/catalog-published.json --strict
 curl -fsS "$ATLAS_BASE_URL/api/v1/catalog?includeExpired=true"
 curl -fsS "$ATLAS_BASE_URL/api/v1/value"
 ```
+
+線上發布後另外把正式站的 catalog 抓回來稽核，確認上線的版本沒有漏更新（`--strict` 會在 gaps 不為 0 時回非零離開碼）：
+
+```sh
+curl -fsS "https://atlas.6yuwei.com/api/v1/catalog?includeExpired=true" -o work/catalog-live.json
+pnpm atlas freshness work/catalog-live.json --strict
+```
+
+同一份 catalog 檔也可用來比對本機編輯庫與線上發布版本的差異（id 集合、verifiedAt、validUntil），本機多出的實體通常代表還沒 stage／發布。
 
 比對新版本與目標欄位後，必須用背景瀏覽器檢查使用者畫面，不把它當成選做：重新載入、搜尋本次更新的模型／方案、確認結果可見、展開詳情並抽查來源連結。瀏覽器插件不可用時改用 Playwright；只看到 API JSON 或 Mongo entity 不算網站驗收。API／瀏覽器檢查、程式測試、build 和部署是不同證據，不能互相冒充。
 
@@ -156,3 +169,4 @@ curl -X POST https://atlas.6yuwei.com/api/admin/stages/<id>/publish \
 - 已暫存：proposal／stage ID、待人工決定的差異。
 - 已發布：Mongo published version、發布 actor、是否加鎖。
 - 已驗證：API 版本／目標欄位、網站畫面；若未驗證要明說原因。
+- 完整性：頂欄核驗日（latestVerifiedAt）是否前進、各集合 fresh／stale 數、gaps 與 retired 的逐筆處理結果；本機與線上 catalog 的差異。

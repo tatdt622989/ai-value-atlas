@@ -11,6 +11,8 @@
 
 目前本機已配置 MongoDB；AI、AA key 尚未提供，因此不能聲稱完整 AI 搜尋與獨立審核已實測。可直接讓 AI 使用 `skills/atlas-data-editor/SKILL.md` 搜尋、核對、建立及發布授權的修改。`pnpm atlas update` 亦可手動執行 collector。
 
+手動更新前後都要用 `pnpm atlas freshness [catalog.json] [--strict]` 稽核完整性：它回報頂欄「資料核驗」顯示的最新 verifiedAt、各集合 fresh／stale／24 小時內到期數，以及 `gaps`（仍在架上卻已掉出有效期）與 `retired`（availability 為 ended）。`gaps` 必須為 0，或有逐筆處理決定；`--strict` 會在仍有 gaps 時回傳非零離開碼。每次核驗發布後頂欄日期會自動前進，沒前進就代表這輪沒有任何 verifiedAt 被更新。
+
 `AUTO_PUBLISH=false` 預設只暫存，適合先人工穩定來源格式。開啟後只有非異常的已映射榜單及完全未變的固定費率來源可自動發布；研究權重、來源選擇、重大變更仍交給編輯。
 
 執行紀錄在 runs；待審提案在 proposals／staged_catalogs；來源差異在 source_reviews；新模型與新來源在 discoveries；原始匯入在 legacy_records。沒有 API key 不會誤寫為「AI 已審核」。排程每日一次包含失敗紀錄；失敗後可以手動重試，避免同一天無限付費重跑。

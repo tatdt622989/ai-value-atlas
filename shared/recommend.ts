@@ -5,6 +5,13 @@ export function isFresh(f: Plan['freshness'], now = new Date()) {
   return f.status === 'verified' && Date.parse(f.verifiedAt) <= t && Date.parse(f.validUntil) > t
     && (!f.effectiveFrom || Date.parse(f.effectiveFrom) <= t) && (!f.expiresAt || Date.parse(f.expiresAt) > t);
 }
+// The freshest verification recorded anywhere in the catalog; the oldest row
+// (e.g. research kept at its original date) must never pin this to the past.
+export function latestVerifiedAt(catalog: Catalog): string | null {
+  const dates = [...catalog.plans, ...catalog.rateCards, ...catalog.offers, ...catalog.research, ...catalog.benchmarks]
+    .map(item => item.freshness.verifiedAt).sort();
+  return dates.at(-1) ?? null;
+}
 export function monthlyCost(p: Plan, prefs: Preferences): number | null {
   let amount = p.billing.amount;
   if (p.kind === 'api') {

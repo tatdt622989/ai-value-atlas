@@ -6,6 +6,7 @@ import ValueDialog from './components/ValueDialog.vue';
 import DataStatusView from './components/DataStatusView.vue';
 import {ValuePreferencesSchema,type Catalog,type Plan,type ValuePreferences} from '../shared/schema';
 import {planMatchesQuery,planModelNames,type ValueResult,type ValueQuote} from '../shared/value';
+import {latestVerifiedAt} from '../shared/recommend';
 import {t,td,toggleLocale} from './i18n';
 import type {UiKey} from './locales/ui';
 const tab=ref('value'),catalog=ref<Catalog|null>(null),status=ref<any>(null),error=ref(''),busy=ref(true),now=ref(Date.now());
@@ -14,7 +15,7 @@ let request=0,debounce:ReturnType<typeof setTimeout>,clock:ReturnType<typeof set
 const detailCatalog=computed(()=>catalog.value);
 const hasDialog=computed(()=>method.value||detail.value.length>0||detailPlan.value!==null);
 const comparable=computed(()=>results.value?.quotes.filter(q=>selected.value.includes(q.id)&&Date.parse(q.validUntil)>now.value)??[]);
-const checkedDate=computed(()=>results.value?.quotes.length?new Date(results.value.quotes.map(q=>q.verifiedAt).sort()[0]).toLocaleDateString('en-GB',{month:'2-digit',day:'2-digit',timeZone:'Asia/Taipei'}).split('/').reverse().join('.'):'—');
+const checkedDate=computed(()=>{const latest=catalog.value?latestVerifiedAt(catalog.value):null;return latest?new Date(latest).toLocaleDateString('en-GB',{month:'2-digit',day:'2-digit',timeZone:'Asia/Taipei'}).split('/').reverse().join('.'):'—';});
 async function api(path:string,options?:RequestInit){const res=await fetch(path,options);const body=await res.json();if(!res.ok)throw new Error(body.error??t('error.service'));return body;}
 async function search(){const id=++request;busy.value=true;try{const validated=ValuePreferencesSchema.parse(prefs.value);const fetchValue=(value:ValuePreferences)=>api('/api/v1/value',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)}) as Promise<ValueResult>;const [data,unfiltered]=await Promise.all([fetchValue(validated),validated.query.trim()?fetchValue({...validated,query:''}):Promise.resolve(null)]);if(id!==request)return;const source=unfiltered??data;const currentCatalog=catalog.value;results.value=currentCatalog?{...data,unknown:[...new Map([...data.unknown,...source.unknown].map(q=>[q.plan.id,q])).values()].filter(q=>planMatchesQuery(currentCatalog,q.plan,validated.query)||td(q.plan.name).toLowerCase().includes(validated.query.toLowerCase().trim())).map(q=>({...q,modelNames:planModelNames(currentCatalog,q.plan)}))}:data;error.value='';const url=new URL(location.href);const defaults=ValuePreferencesSchema.parse({});url.search='';for(const [key,value] of Object.entries(validated))if(value!==defaults[key as keyof ValuePreferences]&&value!==null)url.searchParams.set(key,String(value));history.replaceState(null,'',url);}catch(e){if(id===request)error.value=e instanceof Error?e.message:t('error.load');}finally{if(id===request)busy.value=false;}}
 async function load(){try{[catalog.value,status.value]=await Promise.all([api('/api/v1/catalog?includeExpired=true'),api('/api/v1/status')]);}catch{error.value=t('error.unreachable');}await search();}

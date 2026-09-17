@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {CatalogSchema,ValuePreferencesSchema} from '../shared/schema';
 import {planMatchesQuery,rankValues,valueQuote} from '../shared/value';
+import {latestVerifiedAt} from '../shared/recommend';
 import {sourcesUnchanged} from '../server/value-sources';
 const seed=CatalogSchema.parse(JSON.parse(fs.readFileSync('data/catalog.json','utf8')));
 const now=new Date('2026-09-11T00:00:00Z');
@@ -104,4 +105,13 @@ test('unresolved current ratio preserves the plan and original samples in the ca
  const result=rankValues(data,prefs({query:'Claude'}),now);
  assert.ok(result.unknown.some(q=>q.plan.id===r.planId));assert.ok(!result.quotes.some(q=>q.id===r.id));
  assert.equal(r.sourceSamples.length,5);
+});
+test('topbar verification date reports the newest verification, not the oldest retained row',()=>{
+ const all=[...seed.plans,...seed.rateCards,...seed.offers,...seed.research,...seed.benchmarks].map(x=>x.freshness.verifiedAt).sort();
+ assert.equal(latestVerifiedAt(seed),all.at(-1));
+ assert.notEqual(latestVerifiedAt(seed),all[0]);
+ const data=structuredClone(seed);
+ for(const plan of data.plans){plan.freshness.verifiedAt='2026-09-16T15:00:00.000Z';plan.freshness.validUntil='2026-09-18T15:00:00.000Z';}
+ assert.equal(latestVerifiedAt(data),'2026-09-16T15:00:00.000Z');
+ assert.equal(latestVerifiedAt({...seed,plans:[],rateCards:[],offers:[],research:[],benchmarks:[]}),null);
 });

@@ -13,7 +13,7 @@ import {aiReady} from './ai';
 
 export function createApp(store:AtlasStore) {
   const app=new Hono();
-  app.use('*',secureHeaders({contentSecurityPolicy:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'",'https://fonts.googleapis.com'],fontSrc:["'self'",'https://fonts.gstatic.com'],imgSrc:["'self'",'data:'],connectSrc:["'self'"],frameAncestors:["'none'"],baseUri:["'self'"]},referrerPolicy:'strict-origin-when-cross-origin'}));
+  app.use('*',secureHeaders({contentSecurityPolicy:{defaultSrc:["'self'"],scriptSrc:["'self'",'https://www.googletagmanager.com'],styleSrc:["'self'","'unsafe-inline'",'https://fonts.googleapis.com'],fontSrc:["'self'",'https://fonts.gstatic.com'],imgSrc:["'self'",'data:','https://*.google-analytics.com','https://*.googletagmanager.com'],connectSrc:["'self'",'https://*.google-analytics.com','https://*.analytics.google.com','https://*.googletagmanager.com'],frameAncestors:["'none'"],baseUri:["'self'"]},referrerPolicy:'strict-origin-when-cross-origin'}));
   const smallBody=bodyLimit({maxSize:256000,onError:c=>c.json({error:'Request too large'},413)});
   app.use('/api/*',async(c,next)=>c.req.path.startsWith('/api/admin/stages')?next():smallBody(c,next));
   app.use('/api/admin/stages',bodyLimit({maxSize:16_000_000,onError:c=>c.json({error:'Request too large'},413)}));

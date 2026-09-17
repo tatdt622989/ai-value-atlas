@@ -5,13 +5,17 @@ import {createApp} from './app';
 import {startScheduler} from './loop';
 import fs from 'node:fs/promises';
 import {CatalogSchema} from '../shared/schema';
+import {renderHome} from './shell';
 
 const store=await connectStore();
 await store.seed(CatalogSchema.parse(JSON.parse(await fs.readFile(new URL('../data/catalog.json',import.meta.url),'utf8'))));
 const app=createApp(store);
+const shell=await fs.readFile(new URL('../dist/index.html',import.meta.url),'utf8').catch(()=>null);
 app.get('/brand/*',serveStatic({root:'./dist'}));
 app.get('/assets/*',serveStatic({root:'./dist'}));
-app.get('/',serveStatic({path:'./dist/index.html'}));
+app.get('/robots.txt',serveStatic({path:'./dist/robots.txt'}));
+app.get('/sitemap.xml',serveStatic({path:'./dist/sitemap.xml'}));
+app.get('/',async c=>c.html(await renderHome(store,shell)));
 const stopScheduler=startScheduler(store);
 const server=serve({fetch:app.fetch,port:Number(process.env.PORT??4318),hostname:process.env.HOST??'127.0.0.1'},info=>console.log(`Atlas ready at http://${info.address}:${info.port}`));
 for(const signal of ['SIGINT','SIGTERM'] as const)process.once(signal,()=>{stopScheduler();server.close(async()=>{await store.close();process.exit(0);});});

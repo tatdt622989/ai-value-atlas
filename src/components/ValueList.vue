@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import {computed,ref} from 'vue';
 import type {ValueQuote,ValueResult} from '../../shared/value';
-import type {Plan} from '../../shared/schema';
+import type {Plan,Catalog} from '../../shared/schema';
+import {pendingValuePlans} from '../../shared/value';
+import PendingPlans from './PendingPlans.vue';
 import {providerIcons} from '../provider-icons';
 import {t,td,collatorLocale} from '../i18n';
 import type {UiKey} from '../locales/ui';
-const props=defineProps<{data:ValueResult|null;busy:boolean;now:number}>();
+const props=defineProps<{data:ValueResult|null;catalog:Catalog|null;busy:boolean;now:number}>();
 const emit=defineEmits<{detail:[ValueQuote];unknown:[Plan];reset:[];method:[]}>();
 const quotes=computed(()=>props.data?.quotes.filter(q=>Date.parse(q.validUntil)>props.now)??[]);
 const balanced=computed(()=>props.data?.preferences.ranking!=='value');
@@ -13,7 +15,8 @@ const viewCategory=computed(()=>{const c=props.data?.preferences.category??'all'
 const boardLabel:Record<string,string>={coding:'Coding',webdev:'WebDev',frontend:'Frontend'};
 const max=computed(()=>balanced.value?100:Math.max(...quotes.value.map(q=>q.multiplier),1));
 const displayValue=(q:typeof quotes.value[number])=>balanced.value?q.recommendation?.score??null:q.multiplier;
-const unknown=computed(()=>props.data?.unknown.filter(q=>Date.parse(q.plan.freshness.validUntil)>props.now)??[]);
+const pending=computed(()=>props.catalog&&props.data?pendingValuePlans(props.catalog,props.data,new Date(props.now)):[]);
+const unknown=computed(()=>props.data?.unknown.filter(q=>Date.parse(q.plan.freshness.validUntil)>props.now&&!pending.value.some(p=>p.plan.id===q.plan.id))??[]);
 const money=(n:number)=>n.toLocaleString('en-US',{maximumFractionDigits:2});
 const condition=(q:ValueQuote)=>q.research?td(q.research.label):q.offer.kind==='metered'?t('cond.officialBaseline'):q.offer.id.startsWith('go-')?t('cond.goWindows'):`${td(q.offer.label)} · ${t('cond.utilWeeks',{u:t(q.calculation.utilization===1?'cond.utilFull':q.calculation.utilization===.5?'cond.utilHalf':'cond.utilQuarter')})}`;
 const unknownReason=(p:Plan)=>p.availability==='waitlist'?td('缺貨／候補；暫不可購'):p.kind==='free'?t('unknown.free'):t('unknown.nousage');
@@ -63,11 +66,12 @@ const sortedQuotes=computed(()=>{
           <div class="cost-cell"><template v-if="q.plan.billing.interval==='once'"><strong>${{money(q.upfrontCost)}}</strong><span>{{t('list.oneTime')}}</span></template><template v-else-if="q.monthlyCost!==null"><strong>${{money(q.monthlyCost)}}</strong><span>{{t('list.perMonth')}}</span></template><template v-else>{{t('list.usageBased')}}</template></div>
           <div class="condition-cell">{{condition(q)}}</div><button class="row-arrow" :aria-label="t('list.viewScenario',{plan:td(q.plan.name),model:q.model.name,label:td(q.offer.label)})" @click="emit('detail',q)">→</button>
         </article>
-        <div v-if="!quotes.length&&!unknown.length" class="empty-state"><h2>{{t('list.empty')}}</h2><p>{{t('list.emptyHint')}}</p><button class="solid-button" @click="emit('reset')">{{t('list.clearFilters')}}</button></div>
+        <div v-if="!quotes.length&&!unknown.length&&!pending.length" class="empty-state"><h2>{{t('list.empty')}}</h2><p>{{t('list.emptyHint')}}</p><button class="solid-button" @click="emit('reset')">{{t('list.clearFilters')}}</button></div>
       </template>
       <div v-else class="loading-rows" :aria-label="t('list.loadingRows')"><div v-for="i in 7" :key="i"><span></span><span></span><span></span></div></div>
     </div>
-    <details v-if="unknown.length" class="unknown-plans" :open="Boolean(data?.preferences.query.trim())">
+    <PendingPlans :rows="pending" :open="!quotes.length||Boolean(data?.preferences.query.trim())" @detail="p=>emit('unknown',p)"/>
+    <details v-if="unknown.length" class="unknown-plans" :open="!quotes.length||Boolean(data?.preferences.query.trim())">
       <summary><span class="disclosure" aria-hidden="true">⌄</span><strong>{{t('unknown.title')}}</strong><span class="muted">{{t('unknown.more',{names:unknown.slice(0,2).map(q=>q.plan.name).join('、'),n:unknown.length})}}</span></summary>
       <div class="unknown-intro">{{t('unknown.intro')}}</div>
       <article v-for="q in unknown" :key="q.plan.id"><div><strong>{{td(q.plan.name)}}</strong><small>{{q.modelNames.length?`${q.modelNames.join(' / ')} · ${unknownReason(q.plan)}`:unknownReason(q.plan)}}</small></div><span>{{q.plan.billing.interval==='usage'?t('detail.byUsage'):q.plan.kind==='free'?t('list.free'):`$${money(q.plan.billing.amount)} / ${q.plan.billing.interval==='once'?t('list.oneTime'):q.plan.billing.interval==='year'?t('list.perYear'):t('unknown.perMonth')}`}}</span><button class="row-arrow" :aria-label="t('list.viewPlan',{plan:td(q.plan.name),models:q.modelNames.length?' '+q.modelNames.join(' '):''})" @click="emit('unknown',q.plan)">→</button></article>

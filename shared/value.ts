@@ -27,6 +27,24 @@ export function planMatchesQuery(catalog:Catalog,plan:Plan,rawQuery:string){
   if(modelQuery)return catalog.models.some(model=>plan.modelIds.includes(model.id)&&[model.name,...model.aliases].some(term=>term.toLowerCase().includes(query)));
   return [plan.name,plan.product,plan.description,...plan.benefits,provider?.name??'',...planModelNames(catalog,plan)].join(' ').toLowerCase().includes(query);
 }
+// Keep past-due records readable without changing their dates or using them as
+// current ranking inputs. Explicitly ended promotions remain excluded.
+export function pendingValuePlans(catalog:Catalog,result:ValueResult,now=new Date()){
+  const prefs=result.preferences,t=now.getTime();
+  const available=(f:Plan['freshness'])=>f.status!=='withdrawn'&&Date.parse(f.verifiedAt)<=t&&(!f.effectiveFrom||Date.parse(f.effectiveFrom)<=t)&&(!f.expiresAt||Date.parse(f.expiresAt)>t);
+  const pastDue=(f:Plan['freshness'])=>available(f)&&!isFresh(f,now);
+  const visible=new Set(result.quotes.filter(q=>Date.parse(q.validUntil)>t).map(q=>q.plan.id));
+  return catalog.plans.filter(p=>{
+    if(p.availability==='ended'||!available(p.freshness)||visible.has(p.id))return false;
+    if(prefs.providerId&&p.providerId!==prefs.providerId||prefs.category!=='all'&&!p.categories.includes(prefs.category))return false;
+    if(!planMatchesQuery(catalog,p,prefs.query)||!prefs.allowAnnual&&p.billing.interval==='year')return false;
+    if(prefs.minRank!==null||prefs.minTokensPerSecond!==null)return false;
+    const monthly=monthlyPayment(p),upfront=Math.max(p.billing.upfront,p.billing.minimumPurchase??0,p.billing.interval==='year'?0:monthly);
+    if(prefs.budget!==null&&(p.billing.minimumPurchase===null||monthly>prefs.budget||p.billing.interval!=='year'&&upfront>prefs.budget))return false;
+    if(prefs.upfrontBudget!==null&&(p.billing.minimumPurchase===null||upfront>prefs.upfrontBudget))return false;
+    return pastDue(p.freshness)||catalog.research.some(r=>r.planId===p.id&&pastDue(r.freshness))||catalog.offers.some(o=>o.planId===p.id&&[o,...catalog.rateCards.filter(r=>[o.rateCardId,o.referenceRateCardId].includes(r.id))].some(x=>pastDue(x.freshness)));
+  }).map(plan=>({plan,modelNames:planModelNames(catalog,plan),research:catalog.research.filter(r=>r.planId===plan.id&&r.eligible&&!r.replacedByOfferId&&available(r.freshness))}));
+}
 const CATEGORY_FALLBACK=['general','coding','webdev','frontend'] as const;
 function boardEntry(catalog:Catalog,modelId:string,category:Benchmark['category'],now:Date){
   const available=catalog.benchmarks.filter(b=>b.category===category&&isFresh(b.freshness,now));

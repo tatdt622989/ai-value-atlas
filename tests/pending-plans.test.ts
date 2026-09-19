@@ -1,0 +1,39 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {CatalogSchema,ValuePreferencesSchema} from '../shared/schema';
+import {rankValues,pendingValuePlans} from '../shared/value';
+const catalog=CatalogSchema.parse(JSON.parse(fs.readFileSync('data/catalog.json','utf8')));
+const now=new Date('2026-09-25T00:00:00Z');
+const prefs=ValuePreferencesSchema.parse({});
+test('expired catalog stays readable with original research, without entering the current ranking',()=>{
+ const before=structuredClone(catalog),result=rankValues(catalog,prefs,now);
+ assert.equal(result.quotes.length,0);
+ const pending=pendingValuePlans(catalog,result,now);
+ assert.ok(pending.length>0);
+ const pro=pending.find(q=>q.plan.id==='claude-pro')!;assert.ok(pro);
+ assert.deepEqual(pro.research,catalog.research.filter(r=>r.planId==='claude-pro'&&r.eligible&&!r.replacedByOfferId));
+ assert.deepEqual(catalog,before);
+});
+test('pending records respect provider, model, category, annual and budget filters',()=>{
+ const filtered=ValuePreferencesSchema.parse({providerId:'anthropic',query:'Claude',allowAnnual:false,budget:30});
+ const rows=pendingValuePlans(catalog,rankValues(catalog,filtered,now),now);
+ assert.ok(rows.some(q=>q.plan.id==='claude-pro'));
+ assert.ok(rows.every(q=>q.plan.providerId==='anthropic'&&q.plan.billing.interval!=='year'&&q.plan.billing.amount<=30));
+ const unmatched=ValuePreferencesSchema.parse({query:'no-matching-plan-12345'});
+ assert.deepEqual(pendingValuePlans(catalog,rankValues(catalog,unmatched,now),now),[]);
+});
+test('ended and future plans stay out, and current ranked plans are not duplicated',()=>{
+ const data=structuredClone(catalog);
+ data.plans.find(p=>p.id==='claude-pro')!.availability='ended';
+ data.plans.find(p=>p.id==='claude-max20')!.freshness.verifiedAt='2026-10-01T00:00:00Z';
+ const rows=pendingValuePlans(data,rankValues(data,prefs,now),now);
+ assert.ok(!rows.some(q=>['claude-pro','claude-max20'].includes(q.plan.id)));
+ const earlier=new Date('2026-09-11T00:00:00Z'),current=rankValues(catalog,prefs,earlier);
+ assert.ok(!pendingValuePlans(catalog,current,earlier).some(q=>current.quotes.some(r=>r.plan.id===q.plan.id)));
+});
+test('a record that expires while the page stays open moves into pending display',()=>{
+ const earlier=new Date('2026-09-11T00:00:00Z');
+ const loaded=rankValues(catalog,prefs,earlier);assert.ok(loaded.quotes.some(q=>q.plan.id==='claude-pro'));
+ assert.ok(pendingValuePlans(catalog,loaded,now).some(q=>q.plan.id==='claude-pro'));
+});

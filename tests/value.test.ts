@@ -31,7 +31,7 @@ test('expiry applies to any price, limit or official reference dependency withou
  const future=rankValues(seed,prefs(),new Date('2026-09-25T00:00:00Z'));assert.equal(future.quotes.length,0);assert.equal(seed.research.length,164);
 });
 test('annual commitment stays optional and upfront cap is honored',()=>{
- assert.ok(!rankValues(seed,prefs(),now).quotes.some(q=>q.plan.id==='claude-pro-annual'));
+ assert.ok(!rankValues(seed,prefs({allowAnnual:false}),now).quotes.some(q=>q.plan.id==='claude-pro-annual'));
  assert.ok(rankValues(seed,prefs({allowAnnual:true}),now).quotes.some(q=>q.plan.id==='claude-pro-annual'));
  assert.ok(!rankValues(seed,prefs({allowAnnual:true,upfrontBudget:100}),now).quotes.some(q=>q.plan.id==='claude-pro-annual'));
 });

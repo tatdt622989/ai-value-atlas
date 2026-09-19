@@ -1,6 +1,7 @@
 import { MongoClient } from 'mongodb';
 import { createHash, randomUUID } from 'node:crypto';
 import { CatalogSchema, type Catalog } from '../shared/schema';
+import {assertCatalogPreserved,type PreservationDecision} from '../shared/preservation';
 
 export const hash = (value: unknown) => createHash('sha256').update(typeof value==='string'?value:JSON.stringify(value)).digest('hex');
 export const uid = (prefix:string) => `${prefix}-${randomUUID()}`;
@@ -34,9 +35,12 @@ export class AtlasStore {
     const result=await this.db.collection<{_id:string;version:string}>('pointers').updateOne({_id:'published'},{$setOnInsert:{version:catalog.version}},{upsert:true});
     return {initialized:result.upsertedCount===1,version:(await this.catalog()).version};
   }
-  async publish(catalog: Catalog, baseVersion: string, actor: string, reason: string) {
+  async publish(catalog: Catalog, baseVersion: string, actor: string, reason: string, preservationDecisions:PreservationDecision[]=[]) {
+    const current=await this.catalog();
+    if(current.version!==baseVersion)throw new Error('CONFLICT: published version changed; review against current version');
+    assertCatalogPreserved(current,catalog,preservationDecisions);
     const next=CatalogSchema.parse({...catalog,version:uid('v'),publishedAt:new Date().toISOString()});
-    await this.db.collection('snapshots').insertOne({version:next.version,catalog:next,createdAt:new Date(),actor,reason,baseVersion});
+    await this.db.collection('snapshots').insertOne({version:next.version,catalog:next,createdAt:new Date(),actor,reason,baseVersion,preservationDecisions});
     const changed=await this.db.collection<{_id:string;version:string}>('pointers').updateOne({_id:'published',version:baseVersion},{$set:{version:next.version}});
     if (!changed.modifiedCount) throw new Error('CONFLICT: published version changed; review against current version');
     return next;

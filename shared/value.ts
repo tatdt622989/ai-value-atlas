@@ -42,8 +42,8 @@ export function pendingValuePlans(catalog:Catalog,result:ValueResult,now=new Dat
     const monthly=monthlyPayment(p),upfront=Math.max(p.billing.upfront,p.billing.minimumPurchase??0,p.billing.interval==='year'?0:monthly);
     if(prefs.budget!==null&&(p.billing.minimumPurchase===null||monthly>prefs.budget||p.billing.interval!=='year'&&upfront>prefs.budget))return false;
     if(prefs.upfrontBudget!==null&&(p.billing.minimumPurchase===null||upfront>prefs.upfrontBudget))return false;
-    return pastDue(p.freshness)||catalog.research.some(r=>r.planId===p.id&&pastDue(r.freshness))||catalog.offers.some(o=>o.planId===p.id&&[o,...catalog.rateCards.filter(r=>[o.rateCardId,o.referenceRateCardId].includes(r.id))].some(x=>pastDue(x.freshness)));
-  }).map(plan=>({plan,modelNames:planModelNames(catalog,plan),research:catalog.research.filter(r=>r.planId===plan.id&&r.eligible&&!r.replacedByOfferId&&available(r.freshness))}));
+    return pastDue(p.freshness)||catalog.research.some(r=>r.planId===p.id&&(pastDue(r.freshness)||r.replacedByOfferId!==null))||catalog.offers.some(o=>o.planId===p.id&&[o,...catalog.rateCards.filter(r=>[o.rateCardId,o.referenceRateCardId].includes(r.id))].some(x=>pastDue(x.freshness)));
+  }).map(plan=>({plan,modelNames:planModelNames(catalog,plan),research:catalog.research.filter(r=>r.planId===plan.id)}));
 }
 const CATEGORY_FALLBACK=['general','coding','webdev','frontend'] as const;
 function boardEntry(catalog:Catalog,modelId:string,category:Benchmark['category'],now:Date){

@@ -158,7 +158,7 @@ export const ValuePreferencesSchema=z.object({
   profile:z.enum(['standard','cached']).default('standard'),
   budget:z.number().min(0).max(100000).nullable().default(null),
   upfrontBudget:z.number().min(0).max(100000).nullable().default(null),
-  allowAnnual:z.boolean().default(false),
+  allowAnnual:z.boolean().default(true),
   providerId:z.string().max(100).nullable().default(null),
   query:z.string().max(100).default(''),
   minRank:z.number().int().min(1).max(1000).nullable().default(null),

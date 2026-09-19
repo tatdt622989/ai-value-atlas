@@ -12,7 +12,7 @@ test('expired catalog stays readable with original research, without entering th
  const pending=pendingValuePlans(catalog,result,now);
  assert.ok(pending.length>0);
  const pro=pending.find(q=>q.plan.id==='claude-pro')!;assert.ok(pro);
- assert.deepEqual(pro.research,catalog.research.filter(r=>r.planId==='claude-pro'&&r.eligible&&!r.replacedByOfferId));
+ assert.deepEqual(pro.research,catalog.research.filter(r=>r.planId==='claude-pro'));
  assert.deepEqual(catalog,before);
 });
 test('pending records respect provider, model, category, annual and budget filters',()=>{
@@ -36,4 +36,13 @@ test('a record that expires while the page stays open moves into pending display
  const earlier=new Date('2026-09-11T00:00:00Z');
  const loaded=rankValues(catalog,prefs,earlier);assert.ok(loaded.quotes.some(q=>q.plan.id==='claude-pro'));
  assert.ok(pendingValuePlans(catalog,loaded,now).some(q=>q.plan.id==='claude-pro'));
+});
+test('replacing research with an official offer preserves its original plan and numbers in the visible catalog',()=>{
+ const data=structuredClone(catalog),study=data.research.find(r=>r.ratio!==null)!;
+ const plan=data.plans.find(p=>p.id===study.planId)!;
+ const fresh={...plan.freshness,verifiedAt:'2026-09-24T00:00:00Z',validUntil:'2026-09-26T00:00:00Z',effectiveFrom:null,expiresAt:null};
+ plan.freshness=fresh;study.freshness=fresh;study.replacedByOfferId=data.offers[0].id;
+ const result=rankValues(data,prefs,now);assert.ok(!result.quotes.some(q=>q.id===study.id));
+ const original=pendingValuePlans(data,result,now).find(q=>q.plan.id===plan.id)!;
+ assert.ok(original);assert.deepEqual(original.research.find(r=>r.id===study.id),study);
 });

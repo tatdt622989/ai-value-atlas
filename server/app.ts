@@ -10,6 +10,7 @@ import {ProposalSchema,evaluateProposal,publishProposal,editorialReview,getField
 import {updateLoop} from './loop';
 import {rankValues} from '../shared/value';
 import {aiReady} from './ai';
+import {assertCatalogPreserved,PreservationDecisionSchema} from '../shared/preservation';
 
 export function createApp(store:AtlasStore) {
   const app=new Hono();
@@ -25,7 +26,7 @@ export function createApp(store:AtlasStore) {
     const rateCards=all?cat.rateCards:cat.rateCards.filter(r=>isFresh(r.freshness));
     const offers=all?cat.offers:cat.offers.filter(o=>isFresh(o.freshness)&&plans.some(p=>p.id===o.planId)&&[o.rateCardId,o.referenceRateCardId].every(id=>rateCards.some(r=>r.id===id)));
     // Internal field-lock reasons and actor identities are editorial data.
-    return c.json({...cat,locks:[],plans,rateCards,offers,research:all?cat.research:cat.research.filter(r=>isFresh(r.freshness)),benchmarks:cat.benchmarks.filter(b=>isFresh(b.freshness)),evidence:cat.evidence.map(e=>({...e,excerpt:''}))});
+    return c.json({...cat,locks:[],plans,rateCards,offers,research:all?cat.research:cat.research.filter(r=>isFresh(r.freshness)),benchmarks:all?cat.benchmarks:cat.benchmarks.filter(b=>isFresh(b.freshness)),evidence:cat.evidence.map(e=>({...e,excerpt:''}))});
   });
   app.get('/api/v1/benchmarks',async c=>{const cat=await store.catalog();return c.json({version:cat.version,data:cat.benchmarks.filter(b=>isFresh(b.freshness)&&(!c.req.query('category')||b.category===c.req.query('category')))});});
   app.post('/api/v1/recommend',async c=>{const parsed=PreferencesSchema.safeParse(await c.req.json());if(!parsed.success)return c.json({error:'Invalid preferences',issues:parsed.error.issues},400);return c.json(recommend(await store.catalog(),parsed.data));});
@@ -65,12 +66,13 @@ export function createApp(store:AtlasStore) {
   });
   app.get('/api/admin/stages',async c=>c.json(await store.db.collection('staged_catalogs').find({status:'pending'},{projection:{_id:0,catalog:0}}).limit(100).toArray()));
   app.post('/api/admin/stages',async c=>{
-    const body=z.object({catalog:z.unknown(),reason:z.string().min(8)}).strict().parse(await c.req.json());
+    const body=z.object({catalog:z.unknown(),reason:z.string().min(8),preservationDecisions:z.array(PreservationDecisionSchema).default([])}).strict().parse(await c.req.json());
     const current=await store.catalog(),candidate=CatalogSchema.parse(body.catalog);
+    assertCatalogPreserved(current,candidate,body.preservationDecisions);
     for(const lock of current.locks)if((!lock.expiresAt||Date.parse(lock.expiresAt)>Date.now())&&JSON.stringify(getField(current,lock.path))!==JSON.stringify(getField(candidate,lock.path)))return c.json({error:`Locked field: ${lock.path}`},409);
     candidate.locks=current.locks;
     const id=uid('stage');
-    await store.db.collection('staged_catalogs').insertOne({id,baseVersion:current.version,catalog:candidate,reason:body.reason,status:'pending',createdAt:new Date().toISOString()});
+    await store.db.collection('staged_catalogs').insertOne({id,baseVersion:current.version,catalog:candidate,reason:body.reason,preservationDecisions:body.preservationDecisions,status:'pending',createdAt:new Date().toISOString()});
     return c.json({id,status:'pending',plans:candidate.plans.length,benchmarks:candidate.benchmarks.length},201);
   });
   app.post('/api/admin/stages/:id/publish',async c=>{
@@ -83,7 +85,7 @@ export function createApp(store:AtlasStore) {
     const next=CatalogSchema.parse(staged.catalog);
     for(const lock of current.locks)if((!lock.expiresAt||Date.parse(lock.expiresAt)>Date.now())&&JSON.stringify(getField(current,lock.path))!==JSON.stringify(getField(next,lock.path)))return c.json({error:`Locked field: ${lock.path}`},409);
     next.locks=current.locks;
-    const published=await store.publish(next,current.version,body.actor,staged.reason??'Manually reviewed structured benchmark import');
+    const published=await store.publish(next,current.version,body.actor,staged.reason??'Manually reviewed structured benchmark import',staged.preservationDecisions??[]);
     await store.db.collection('staged_catalogs').updateOne({id:staged.id},{$set:{status:'published',publishedVersion:published.version}});
     return c.json({version:published.version});
   });
@@ -95,6 +97,7 @@ export function createApp(store:AtlasStore) {
   app.onError((e,c)=>{
     if(e instanceof z.ZodError)return c.json({error:'Validation failed',issues:e.issues},400);
     if(e instanceof SyntaxError)return c.json({error:'Invalid JSON'},400);
+    if(e.message.startsWith('Catalog preservation failed'))return c.json({error:e.message},409);
     const conflict=e.message.startsWith('CONFLICT:');
     console.error('Request failed:',e.message);
     return c.json({error:conflict?'Concurrent edit; reload and review again':'Request failed; see server log'},conflict?409:500);

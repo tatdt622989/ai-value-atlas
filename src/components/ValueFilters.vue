@@ -8,7 +8,7 @@ const emit=defineEmits<{ 'update:modelValue':[ValuePreferences];reset:[] }>();
 const expanded=ref(false);
 const categories:[string,UiKey][]=[['all','filter.all'],['coding','filter.coding'],['webdev','filter.webdev'],['frontend','filter.frontend']];
 function set<K extends keyof ValuePreferences>(key:K,value:ValuePreferences[K]){emit('update:modelValue',{...props.modelValue,[key]:value});}
-const count=computed(()=>[props.modelValue.budget!==null,props.modelValue.upfrontBudget!==null,props.modelValue.providerId!==null,props.modelValue.minRank!==null,props.modelValue.profile!=='standard',!!props.modelValue.query,props.modelValue.allowAnnual,props.modelValue.minTokensPerSecond!==null].filter(Boolean).length);
+const count=computed(()=>[props.modelValue.budget!==null,props.modelValue.upfrontBudget!==null,props.modelValue.providerId!==null,props.modelValue.minRank!==null,props.modelValue.profile!=='standard',!!props.modelValue.query,!props.modelValue.allowAnnual,props.modelValue.minTokensPerSecond!==null].filter(Boolean).length);
 </script>
 <template>
 <section class="filter-band compact-filters" :aria-label="t('filter.aria')">

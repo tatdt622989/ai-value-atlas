@@ -4,10 +4,12 @@ import {CatalogSchema} from '../shared/schema';
 import {ProposalSchema,evaluateProposal,publishProposal,getField,editorialReview} from './policy';
 import {updateLoop} from './loop';
 import {freshnessAudit} from '../shared/recommend';
+import {assertCatalogPreserved,PreservationDecisionSchema} from '../shared/preservation';
+import {z} from 'zod';
 
 const [command,...args]=process.argv.slice(2);
 if(!command||command==='help'){
-  console.log('atlas seed | status | freshness [catalog.json] [--strict] | export <file> | import-legacy <html> | update | proposals | source-reviews | discoveries | stages | show-stage <id> <file> | submit <proposal.json> | check <id> | publish <id> --actor <name> --manual [--lock] | stage <catalog.json> --reason <text> | publish-stage <id> --actor <name> | unlock <path> --reason <text> --actor <name> | rollback <version> --reason <text> --actor <name>');
+  console.log('atlas seed | status | freshness [catalog.json] [--strict] | export <file> | import-legacy <html> | update | proposals | source-reviews | discoveries | stages | show-stage <id> <file> | submit <proposal.json> | check <id> | publish <id> --actor <name> --manual [--lock] | stage <catalog.json> --reason <text> [--loss-decisions <file.json>] | publish-stage <id> --actor <name> | unlock <path> --reason <text> --actor <name> | rollback <version> --reason <text> --actor <name>');
   process.exit(0);
 }
 const option=(key:string)=>{const i=args.indexOf(key);return i>=0?args[i+1]:undefined;};
@@ -59,9 +61,12 @@ try {
     case 'stage':{
       if(!reason||reason.length<8)throw new Error('--reason with 8+ characters required');
       const current=await store.catalog(),candidate=CatalogSchema.parse(JSON.parse(await fs.readFile(args[0],'utf8')));
+      const decisionsFile=option('--loss-decisions');
+      const preservationDecisions=z.array(PreservationDecisionSchema).parse(decisionsFile?JSON.parse(await fs.readFile(decisionsFile,'utf8')):[]);
+      assertCatalogPreserved(current,candidate,preservationDecisions);
       for(const lock of current.locks)if((!lock.expiresAt||Date.parse(lock.expiresAt)>Date.now())&&JSON.stringify(getField(current,lock.path))!==JSON.stringify(getField(candidate,lock.path)))throw new Error(`Locked field: ${lock.path}`);
       candidate.locks=current.locks;
-      const id=uid('stage');await store.db.collection('staged_catalogs').insertOne({id,baseVersion:current.version,catalog:candidate,reason,status:'pending',createdAt:new Date().toISOString()});result={id,status:'pending',plans:candidate.plans.length,benchmarks:candidate.benchmarks.length};break;
+      const id=uid('stage');await store.db.collection('staged_catalogs').insertOne({id,baseVersion:current.version,catalog:candidate,reason,preservationDecisions,status:'pending',createdAt:new Date().toISOString()});result={id,status:'pending',plans:candidate.plans.length,benchmarks:candidate.benchmarks.length};break;
     }
     case 'publish-stage':{
       if(!actor)throw new Error('--actor required');const staged=await store.db.collection('staged_catalogs').findOne({id:args[0],status:'pending'});if(!staged)throw new Error('Stage not found');
@@ -70,7 +75,7 @@ try {
       const next=CatalogSchema.parse(staged.catalog);
       for(const lock of current.locks)if((!lock.expiresAt||Date.parse(lock.expiresAt)>Date.now())&&JSON.stringify(getField(current,lock.path))!==JSON.stringify(getField(next,lock.path)))throw new Error(`Locked field: ${lock.path}`);
       next.locks=current.locks;
-      const published=await store.publish(next,current.version,actor,staged.reason??'Manually reviewed structured benchmark import');
+      const published=await store.publish(next,current.version,actor,staged.reason??'Manually reviewed structured benchmark import',staged.preservationDecisions??[]);
       await store.db.collection('staged_catalogs').updateOne({id:args[0]},{$set:{status:'published',publishedVersion:published.version}});result={version:published.version};break;
     }
     case 'unlock':{

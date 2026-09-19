@@ -4,6 +4,15 @@ import {recommendation,efficiencyReference,RANKING_VERSION,RANKING_WEIGHTS} from
 
 export const CALCULATION_VERSION='official-equivalent-1';
 export const utilizationFactor={full:1,half:0.5,quarter:0.25};
+// Earlier editorial reviews stored the exact retired ratio in the audit notes.
+// Surface that historical number without changing eligibility or current ratios.
+export function historicalResearchRatio(research:ResearchValue):number|null{
+  for(const note of [...research.reviewNotes].reverse()){
+    const match=note.match(/本次修正前：ratio=(\d+(?:\.\d+)?)/);
+    if(match&&Number.isFinite(Number(match[1])))return Number(match[1]);
+  }
+  return null;
+}
 // Explicit scenarios, not claims about an average user's actual usage.
 export function blendedRate(rate:RateCard,prefs:ValuePreferences):number|null{
   if(rate.contextUpperBound!==null&&prefs.context>rate.contextUpperBound)return null;

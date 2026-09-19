@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {CatalogSchema,ValuePreferencesSchema} from '../shared/schema';
-import {rankValues,pendingValuePlans} from '../shared/value';
+import {rankValues,pendingValuePlans,historicalResearchRatio} from '../shared/value';
 const catalog=CatalogSchema.parse(JSON.parse(fs.readFileSync('data/catalog.json','utf8')));
 const now=new Date('2026-09-25T00:00:00Z');
 const prefs=ValuePreferencesSchema.parse({});
@@ -45,4 +45,11 @@ test('replacing research with an official offer preserves its original plan and 
  const result=rankValues(data,prefs,now);assert.ok(!result.quotes.some(q=>q.id===study.id));
  const original=pendingValuePlans(data,result,now).find(q=>q.plan.id===plan.id)!;
  assert.ok(original);assert.deepEqual(original.research.find(r=>r.id===study.id),study);
+});
+
+test('retired ratios are visible only as historical numbers and never restored to current ranking data',()=>{
+ const study=structuredClone(catalog.research[0]);study.ratio=null;study.reviewNotes=['本次修正前：ratio=57.48566666666667，method=原始樣本平均'];
+ const before=structuredClone(study);
+ assert.equal(historicalResearchRatio(study),57.48566666666667);assert.deepEqual(study,before);
+ study.reviewNotes=['待重新核驗，尚無可重現的數值'];assert.equal(historicalResearchRatio(study),null);
 });

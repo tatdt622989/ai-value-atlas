@@ -48,6 +48,8 @@ export function createApp(store:AtlasStore) {
     if(expected.length<32||given.length!==expected.length||!timingSafeEqual(Buffer.from(expected),Buffer.from(given)))return c.json({error:'Unauthorized'},401);
     await next();
   });
+  // Editors need an unredacted snapshot; the public catalog strips source text and locks.
+  app.get('/api/admin/catalog',async c=>c.json(await store.catalog()));
   app.get('/api/admin/proposals',async c=>c.json(await store.db.collection('proposals').find({status:{$ne:'published'}},{projection:{_id:0}}).limit(100).toArray()));
   app.post('/api/admin/proposals',async c=>{
     const proposal=ProposalSchema.parse(await c.req.json());

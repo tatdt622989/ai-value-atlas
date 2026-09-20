@@ -12,6 +12,7 @@ export function catalogLosses(before:Catalog,after:Catalog){
    if(!current){losses.push({path,reason:'Existing record removed'});continue;}
    const walk=(a:any,b:any,p:string)=>{if(typeof a==='number'&&Number.isFinite(a)&&(b===null||b===undefined)){losses.push({path:p,reason:'Existing number replaced by an empty value'});return;}if(a&&typeof a==='object'&&!Array.isArray(a))for(const k of Object.keys(a))walk(a[k],b?.[k],`${p}/${k}`);};
    walk(old,current,path);
+   if(name==='evidence'&&(old as Catalog['evidence'][number]).excerpt.trim()&&!current.excerpt?.trim())losses.push({path:`${path}/excerpt`,reason:'Existing source text cleared; public catalog responses are not publication snapshots'});
    if(name==='plans'){
     for(const id of (old as Catalog['plans'][number]).modelIds)if(!current.modelIds.includes(id))losses.push({path:`${path}/modelIds/${id}`,reason:'Existing model link removed'});
     if((old as Catalog['plans'][number]).availability==='public'&&current.availability!=='public')losses.push({path:`${path}/availability`,reason:'Public availability reduced'});

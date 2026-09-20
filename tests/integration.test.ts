@@ -25,6 +25,9 @@ test('Mongo snapshots, CAS, lease and public API work together', {skip:!enabled}
   const app=createApp(store);
   assert.equal((await app.request('/healthz')).status,200);
   assert.equal((await app.request('/api/admin/proposals')).status,401);
+  assert.equal((await app.request('/api/admin/catalog')).status,401);
+  const originalToken=process.env.ADMIN_TOKEN;process.env.ADMIN_TOKEN='integration-only-catalog-token-0000000000';
+  try{const privateCatalog=await app.request('/api/admin/catalog',{headers:{Authorization:`Bearer ${process.env.ADMIN_TOKEN}`}});assert.equal(privateCatalog.status,200);assert.deepEqual(await privateCatalog.json(),first);}finally{if(originalToken===undefined)delete process.env.ADMIN_TOKEN;else process.env.ADMIN_TOKEN=originalToken;}
   const bad=await app.request('/api/v1/value',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"budget":-1}'});assert.equal(bad.status,400);
   const response=await app.request('/api/v1/value');assert.equal(response.status,200);const body=await response.json() as any;
   assert.ok(body.quotes.some((q:any)=>q.plan.id==='chatgpt-plus'));assert.ok(body.quotes.every((q:any)=>Number.isFinite(q.multiplier)));
@@ -39,7 +42,8 @@ test('Mongo snapshots, CAS, lease and public API work together', {skip:!enabled}
   assert.deepEqual(full.benchmarks,historical.benchmarks);
   assert.ok(!current.benchmarks.some((b:any)=>b.id===historical.benchmarks[0].id));
   for(const category of ['all','coding','webdev','frontend']){
-   const visible=await (await app.request('/api/v1/value?category='+category)).json() as any;
+   const visible=await (await app.request('/api/v1/value',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category})})).json() as any;
+   assert.equal(visible.preferences.category,category);
    const expected=historical.plans.filter(p=>category==='all'||p.categories.includes(category as any)).map(p=>p.id).sort();
    assert.deepEqual([...new Set([...visible.quotes,...visible.unknown].map((r:any)=>r.plan.id))].sort(),expected);
    assert.ok(visible.quotes.some((q:any)=>q.plan.id==='chatgpt-plus'));

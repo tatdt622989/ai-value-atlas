@@ -31,6 +31,7 @@ export const PlanSchema = z.object({
   description: z.string().max(400), benefits: z.array(z.string()).max(8), limitations: z.array(z.string()).min(1),
   billing: z.object({
     currency: z.string().regex(/^[A-Z]{3}$/), amount: z.number().nonnegative(),
+    priceLabel: z.string().min(1).max(100).optional(),
     interval: z.enum(['month', 'year', 'usage', 'once']), upfront: z.number().nonnegative(),
     minimumPurchase: z.number().nonnegative().nullable(), renewalAmount: z.number().nonnegative().nullable(),
     feePercent: z.number().min(0).max(100), feeFixed: z.number().nonnegative(), taxIncluded: z.boolean(),
@@ -93,6 +94,7 @@ export const OfferSchema=z.object({
 export const ResearchValueSchema=z.object({
   id:Id,planId:Id,modelId:Id,originalId:z.string(),sourceFileHash:z.string().regex(/^[a-f0-9]{64}$/),
   basis:z.enum(['research-estimate','research-calculated']),modelLabel:z.string(),label:z.string(),
+  tokenInference:z.enum(['model-proxy','disabled']).optional(),
   eligible:z.boolean(),replacedByOfferId:Id.nullable(),monthlyCost:z.number().nonnegative().nullable(),cash:z.number().positive(),upfrontCost:z.number().nonnegative(),
   ratio:z.number().nonnegative().nullable(),cachedRatio:z.number().nonnegative().nullable(),millionTokens:z.number().nonnegative().nullable(),cachedMillionTokens:z.number().nonnegative().nullable(),
   low:z.number().nonnegative().nullable(),high:z.number().nonnegative().nullable(),confidence:z.string(),method:z.string(),warning:z.string(),

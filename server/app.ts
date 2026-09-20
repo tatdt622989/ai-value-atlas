@@ -8,7 +8,7 @@ import {isFresh,recommend} from '../shared/recommend';
 import { type AtlasStore, uid } from './store';
 import {ProposalSchema,evaluateProposal,publishProposal,editorialReview,getField} from './policy';
 import {updateLoop} from './loop';
-import {rankValues} from '../shared/value';
+import {rankCatalogValues} from '../shared/value';
 import {aiReady} from './ai';
 import {assertCatalogPreserved,PreservationDecisionSchema} from '../shared/preservation';
 
@@ -30,8 +30,8 @@ export function createApp(store:AtlasStore) {
   });
   app.get('/api/v1/benchmarks',async c=>{const cat=await store.catalog();return c.json({version:cat.version,data:cat.benchmarks.filter(b=>isFresh(b.freshness)&&(!c.req.query('category')||b.category===c.req.query('category')))});});
   app.post('/api/v1/recommend',async c=>{const parsed=PreferencesSchema.safeParse(await c.req.json());if(!parsed.success)return c.json({error:'Invalid preferences',issues:parsed.error.issues},400);return c.json(recommend(await store.catalog(),parsed.data));});
-  app.post('/api/v1/value',async c=>{const parsed=ValuePreferencesSchema.safeParse(await c.req.json());if(!parsed.success)return c.json({error:'Invalid preferences',issues:parsed.error.issues},400);return c.json(rankValues(await store.catalog(),parsed.data));});
-  app.get('/api/v1/value',async c=>c.json(rankValues(await store.catalog(),ValuePreferencesSchema.parse({}))));
+  app.post('/api/v1/value',async c=>{const parsed=ValuePreferencesSchema.safeParse(await c.req.json());if(!parsed.success)return c.json({error:'Invalid preferences',issues:parsed.error.issues},400);return c.json(rankCatalogValues(await store.catalog(),parsed.data));});
+  app.get('/api/v1/value',async c=>c.json(rankCatalogValues(await store.catalog(),ValuePreferencesSchema.parse({}))));
   app.get('/api/v1/schema',c=>c.json(z.toJSONSchema(CatalogSchema)));
   app.get('/api/v1/status',async c=>{
     const [legacyCount,proposalCount,stageCount,sourceReviewCount,lastRun]=await Promise.all([

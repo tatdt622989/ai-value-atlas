@@ -1,81 +1,85 @@
 <script setup lang="ts">
 import {computed,ref} from 'vue';
-import type {ValueQuote,ValueResult} from '../../shared/value';
+import type {RankedValueQuote,ValueQuote,ValueResult} from '../../shared/value';
 import type {Plan,Catalog} from '../../shared/schema';
-import {pendingValuePlans} from '../../shared/value';
-import PendingPlans from './PendingPlans.vue';
 import {providerIcons} from '../provider-icons';
 import {t,td,collatorLocale} from '../i18n';
 import type {UiKey} from '../locales/ui';
 const props=defineProps<{data:ValueResult|null;catalog:Catalog|null;busy:boolean;now:number}>();
 const emit=defineEmits<{detail:[ValueQuote];unknown:[Plan];reset:[];method:[]}>();
-const quotes=computed(()=>props.data?.quotes.filter(q=>Date.parse(q.validUntil)>props.now)??[]);
+const quotes=computed(()=>props.data?.quotes??[]);
 const balanced=computed(()=>props.data?.preferences.ranking!=='value');
-const viewCategory=computed(()=>{const c=props.data?.preferences.category??'all';return c==='all'?'general':c;});
-const boardLabel:Record<string,string>={coding:'Coding',webdev:'WebDev',frontend:'Frontend'};
+const displayValue=(q:RankedValueQuote)=>balanced.value?q.recommendation.score:q.multiplier;
 const max=computed(()=>balanced.value?100:Math.max(...quotes.value.map(q=>q.multiplier),1));
-const displayValue=(q:typeof quotes.value[number])=>balanced.value?q.recommendation?.score??null:q.multiplier;
-const pending=computed(()=>props.catalog&&props.data?pendingValuePlans(props.catalog,props.data,new Date(props.now)):[]);
-const unknown=computed(()=>props.data?.unknown.filter(q=>Date.parse(q.plan.freshness.validUntil)>props.now&&!pending.value.some(p=>p.plan.id===q.plan.id))??[]);
 const money=(n:number)=>n.toLocaleString('en-US',{maximumFractionDigits:2});
+const currency=(p:Plan)=>p.billing.currency==='USD'?'$':p.billing.currency+' ';
 const condition=(q:ValueQuote)=>q.research?td(q.research.label):q.offer.kind==='metered'?t('cond.officialBaseline'):q.offer.id.startsWith('go-')?t('cond.goWindows'):`${td(q.offer.label)} · ${t('cond.utilWeeks',{u:t(q.calculation.utilization===1?'cond.utilFull':q.calculation.utilization===.5?'cond.utilHalf':'cond.utilQuarter')})}`;
-const unknownReason=(p:Plan)=>p.availability==='waitlist'?td('缺貨／候補；暫不可購'):p.kind==='free'?t('unknown.free'):t('unknown.nousage');
+type Row={id:string;plan:Plan;quote:RankedValueQuote|null;provider:string;models:string};
+const baseRows=computed<Row[]>(()=>[
+ ...quotes.value.map(q=>({id:q.id,plan:q.plan,quote:q,provider:q.provider.name,models:q.model.name})),
+ ...(props.data?.unknown??[]).filter(p=>!quotes.value.some(q=>q.plan.id===p.plan.id)).map(p=>({id:`plan-${p.plan.id}`,plan:p.plan,quote:null,provider:props.catalog?.providers.find(v=>v.id===p.plan.providerId)?.name??p.plan.providerId,models:p.modelNames.join(' / ')})),
+]);
+const planCount=computed(()=>new Set(baseRows.value.map(r=>r.plan.id)).size);
+function state(row:Row){
+ const p=row.plan,q=row.quote;
+ if(p.availability==='ended'||p.freshness.status==='withdrawn')return t('record.ended');
+ if(p.availability==='waitlist')return t('record.waitlist');
+ if(p.freshness.effectiveFrom&&Date.parse(p.freshness.effectiveFrom)>props.now)return t('record.upcoming');
+ if(q?.dataStatus==='historical')return t('research.historical');
+ if(q?.dataStatus==='review'||Date.parse(q?.validUntil??p.freshness.validUntil)<=props.now)return t('record.review');
+ return '';
+}
+function fallbackValue(p:Plan){return p.kind==='free'?t('list.free'):p.quota.amount!==null?money(p.quota.amount):p.billing.interval==='usage'?t('list.usageBased'):t('record.variableQuota');}
+function price(row:Row){
+ const p=row.plan,q=row.quote;
+ if(p.billing.priceLabel)return td(p.billing.priceLabel);
+ if(p.kind==='free')return t('list.free');
+ if(p.billing.interval==='usage')return t('list.usageBased');
+ if(p.billing.interval==='once')return `${currency(p)}${money(q?.upfrontCost??p.billing.upfront)} · ${t('list.oneTime')}`;
+ if(p.billing.interval==='year')return `${currency(p)}${money(q?.monthlyCost??p.billing.amount/12)} / ${t('unknown.perMonth')}`;
+ return `${currency(p)}${money(q?.monthlyCost??p.billing.amount)} / ${t('unknown.perMonth')}`;
+}
+const open=(row:Row)=>row.quote?emit('detail',row.quote):emit('unknown',row.plan);
 type SortKey='value'|'plan'|'rank'|'cost';
-type SortDirection='asc'|'desc';
-const sortKey=ref<SortKey>('value');
-const sortDirection=ref<SortDirection>('desc');
-const defaultDirection:Record<SortKey,SortDirection>={value:'desc',plan:'asc',rank:'asc',cost:'asc'};
-const sortLabels:Record<SortKey,UiKey>={value:'sort.value',plan:'sort.plan',rank:'sort.rank',cost:'sort.cost'};
-const sortIndicator=(key:SortKey)=>sortKey.value===key?(sortDirection.value==='asc'?'↑':'↓'):'↕';
-const sortDirectionLabel=(key:SortKey)=>sortKey.value!==key?t('sort.none'):sortDirection.value==='asc'?t('sort.asc'):t('sort.desc');
-const toggleSort=(key:SortKey)=>{if(sortKey.value===key)sortDirection.value=sortDirection.value==='asc'?'desc':'asc';else{sortKey.value=key;sortDirection.value=defaultDirection[key]}};
-const sortedQuotes=computed(()=>{
- const rows=[...quotes.value],direction=sortDirection.value==='asc'?1:-1;
- const compareNullable=(a:number|null,b:number|null)=>{if(a===null&&b===null)return 0;if(a===null)return 1;if(b===null)return -1;return(a-b)*direction};
- rows.sort((a,b)=>{
-  let result=0;
-  if(sortKey.value==='value')result=compareNullable(displayValue(a),displayValue(b));
-  if(sortKey.value==='rank')result=compareNullable(a.benchmark?.rank??null,b.benchmark?.rank??null);
-  if(sortKey.value==='cost')result=compareNullable(a.monthlyCost,b.monthlyCost);
-  if(sortKey.value==='plan')result=(`${a.provider.name} ${a.plan.name} ${a.model.name}`).localeCompare(`${b.provider.name} ${b.plan.name} ${b.model.name}`,collatorLocale())*direction;
-  return result||b.multiplier-a.multiplier||(a.monthlyCost??Infinity)-(b.monthlyCost??Infinity)||a.id.localeCompare(b.id);
+const sortKey=ref<SortKey>('value'),sortDirection=ref<'asc'|'desc'>('desc');
+const defaults:Record<SortKey,'asc'|'desc'>={value:'desc',plan:'asc',rank:'asc',cost:'asc'};
+const labels:Record<SortKey,UiKey>={value:'sort.value',plan:'sort.plan',rank:'sort.rank',cost:'sort.cost'};
+const indicator=(key:SortKey)=>sortKey.value===key?(sortDirection.value==='asc'?'↑':'↓'):'↕';
+const directionLabel=(key:SortKey)=>sortKey.value!==key?t('sort.none'):sortDirection.value==='asc'?t('sort.asc'):t('sort.desc');
+const toggleSort=(key:SortKey)=>{if(sortKey.value===key)sortDirection.value=sortDirection.value==='asc'?'desc':'asc';else{sortKey.value=key;sortDirection.value=defaults[key]}};
+const rows=computed(()=>{
+ const direction=sortDirection.value==='asc'?1:-1;
+ const compare=(a:number|null,b:number|null)=>a===null&&b===null?0:a===null?1:b===null?-1:(a-b)*direction;
+ return [...baseRows.value].sort((a,b)=>{
+  let value=0;
+  if(sortKey.value==='value')value=compare(a.quote?displayValue(a.quote):null,b.quote?displayValue(b.quote):null);
+  if(sortKey.value==='rank')value=compare(a.quote?.benchmark?.rank??null,b.quote?.benchmark?.rank??null);
+  if(sortKey.value==='cost')value=compare(a.quote?.monthlyCost??a.plan.billing.amount/(a.plan.billing.interval==='year'?12:1),b.quote?.monthlyCost??b.plan.billing.amount/(b.plan.billing.interval==='year'?12:1));
+  if(sortKey.value==='plan')value=(`${a.provider} ${a.plan.name} ${a.models}`).localeCompare(`${b.provider} ${b.plan.name} ${b.models}`,collatorLocale())*direction;
+  return value||(b.quote?.multiplier??-1)-(a.quote?.multiplier??-1)||a.id.localeCompare(b.id);
  });
- return rows;
 });
 </script>
 <template>
-  <section class="value-results" :aria-label="t('list.aria')" :aria-busy="busy">
-    <div class="value-basis">
-      <h1>{{balanced?t('list.headingBalanced'):t('list.headingValue')}}</h1>
-      <button class="basis-link" @click="emit('method')">{{balanced?t('list.methodBalanced'):t('list.methodValue')}} <span class="info-icon" aria-hidden="true">i</span></button>
-    </div>
-    <div v-if="busy" role="status" class="loading-line"><span></span><span class="sr-only">{{t('list.updating')}}</span></div>
-    <div class="value-table">
-      <div class="value-head value-grid">
-        <button type="button" class="sort-button" :aria-label="t(sortLabels.value) + '，' + sortDirectionLabel('value')" :aria-pressed="sortKey==='value'" @click="toggleSort('value')">{{balanced?t('list.score'):t('list.perDollar')}} <span class="sort-icon" aria-hidden="true">{{sortIndicator('value')}}</span></button>
-        <button type="button" class="sort-button" :aria-label="t(sortLabels.plan) + '，' + sortDirectionLabel('plan')" :aria-pressed="sortKey==='plan'" @click="toggleSort('plan')">{{t('sort.plan')}} <span class="sort-icon" aria-hidden="true">{{sortIndicator('plan')}}</span></button>
-        <button type="button" class="sort-button" :aria-label="t(sortLabels.rank) + '，' + sortDirectionLabel('rank')" :aria-pressed="sortKey==='rank'" @click="toggleSort('rank')">{{t('sort.rank')}} <span class="sort-icon" aria-hidden="true">{{sortIndicator('rank')}}</span></button>
-        <button type="button" class="sort-button" :aria-label="t(sortLabels.cost) + '，' + sortDirectionLabel('cost')" :aria-pressed="sortKey==='cost'" @click="toggleSort('cost')">{{t('sort.cost')}} <span class="sort-icon" aria-hidden="true">{{sortIndicator('cost')}}</span></button>
-        <span>{{t('sort.conditions')}}</span><span></span>
-      </div>
-      <template v-if="data">
-        <article v-for="(q,i) in sortedQuotes" :key="q.id" class="value-row value-grid" :class="{best:i===0&&(!balanced||displayValue(q)!==null)}">
-          <div class="value-cell"><strong>{{(displayValue(q)??q.multiplier).toFixed(1)}}<span v-if="!balanced||displayValue(q)===null">×</span><sup v-if="q.basis==='research-estimate'" :aria-label="q.research?td(q.research.label):t('score.estimate')">*</sup></strong><div v-if="displayValue(q)!==null" class="value-track" aria-hidden="true"><span :style="{width:((displayValue(q)??0)/max*100)+'%'}"></span></div><span class="score-context" v-if="balanced">{{q.recommendation?.score===null?(q.recommendation.reason==='missing-comparable-usage'?t('score.pendingSplit'):t('score.noBenchmark',{v:q.multiplier.toFixed(1)})):t('score.multiplier',{v:q.multiplier.toFixed(1),basis:q.basis==='research-estimate'?t('score.estimate'):t('score.discount')})}}</span></div>
-          <div class="plan-cell" :class="{'research-plan':q.research}"><span class="provider-mark" aria-hidden="true"><img v-if="providerIcons[q.provider.id]" :src="providerIcons[q.provider.id]" alt="" loading="lazy"><template v-else>{{q.provider.id==='opencode'?'OC':q.provider.name.slice(0,1)}}</template></span><div class="plan-name"><span>{{q.provider.name}}<span class="name-dot"> · </span>{{q.plan.kind==='api'?t('list.officialApi'):td(q.plan.name).replace(q.provider.name,'').replace('Coding ','').trim()}}</span><small>{{q.model.name}}</small><span class="mobile-price">{{q.plan.billing.interval==='once'?`$${money(q.upfrontCost)} · ${t('list.oneTime')}`:q.monthlyCost===null?t('list.usageBased'):`$${money(q.monthlyCost)}${t('list.perMonth')}`}}<span v-if="q.basis==='research-estimate'"> · {{t('list.est')}}*</span></span></div></div>
-          <div class="ability-cell"><strong v-if="q.benchmark?.rank&&Date.parse(q.benchmark.freshness.validUntil)>now">#{{q.benchmark.rank}}<small v-if="q.benchmark.category!==viewCategory" class="board-tag">{{boardLabel[q.benchmark.category]??q.benchmark.category}}</small></strong><span v-else class="muted">{{t('score.notListed')}}</span></div>
-          <div class="cost-cell"><template v-if="q.plan.billing.interval==='once'"><strong>${{money(q.upfrontCost)}}</strong><span>{{t('list.oneTime')}}</span></template><template v-else-if="q.monthlyCost!==null"><strong>${{money(q.monthlyCost)}}</strong><span>{{t('list.perMonth')}}</span></template><template v-else>{{t('list.usageBased')}}</template></div>
-          <div class="condition-cell">{{condition(q)}}</div><button class="row-arrow" :aria-label="t('list.viewScenario',{plan:td(q.plan.name),model:q.model.name,label:td(q.offer.label)})" @click="emit('detail',q)">→</button>
-        </article>
-        <div v-if="!quotes.length&&!unknown.length&&!pending.length" class="empty-state"><h2>{{t('list.empty')}}</h2><p>{{t('list.emptyHint')}}</p><button class="solid-button" @click="emit('reset')">{{t('list.clearFilters')}}</button></div>
-      </template>
-      <div v-else class="loading-rows" :aria-label="t('list.loadingRows')"><div v-for="i in 7" :key="i"><span></span><span></span><span></span></div></div>
-    </div>
-    <PendingPlans :rows="pending" :open="true" @detail="p=>emit('unknown',p)"/>
-    <details v-if="unknown.length" class="unknown-plans" :open="true">
-      <summary><span class="disclosure" aria-hidden="true">⌄</span><strong>{{t('unknown.title')}}</strong><span class="muted">{{t('unknown.more',{names:unknown.slice(0,2).map(q=>q.plan.name).join('、'),n:unknown.length})}}</span></summary>
-      <div class="unknown-intro">{{t('unknown.intro')}}</div>
-      <article v-for="q in unknown" :key="q.plan.id"><div><strong>{{td(q.plan.name)}}</strong><small>{{q.modelNames.length?`${q.modelNames.join(' / ')} · ${unknownReason(q.plan)}`:unknownReason(q.plan)}}</small></div><span>{{q.plan.billing.interval==='usage'?t('detail.byUsage'):q.plan.kind==='free'?t('list.free'):`${q.plan.billing.currency==='USD'?'$':q.plan.billing.currency+' '}${money(q.plan.billing.amount)} / ${q.plan.billing.interval==='once'?t('list.oneTime'):q.plan.billing.interval==='year'?t('list.perYear'):t('unknown.perMonth')}`}}</span><button class="row-arrow" :aria-label="t('list.viewPlan',{plan:td(q.plan.name),models:q.modelNames.length?' '+q.modelNames.join(' '):''})" @click="emit('unknown',q.plan)">→</button></article>
-    </details>
-    <div class="results-note"><span v-if="balanced">{{t('list.balancedNote')}}</span><span>{{t('list.estimateNote')}}</span><span v-if="data" aria-live="polite">{{t('list.scenarios',{n:quotes.length})}}</span></div>
-  </section>
+ <section class="value-results" :aria-label="t('list.aria')" :aria-busy="busy">
+  <div class="value-basis"><h1>{{balanced?t('list.headingBalanced'):t('list.headingValue')}}</h1><button class="basis-link" @click="emit('method')">{{balanced?t('list.methodBalanced'):t('list.methodValue')}} <span class="info-icon" aria-hidden="true">i</span></button><span v-if="data" class="catalog-total" aria-live="polite">{{t('record.total',{n:planCount,scenarios:quotes.length})}}</span></div>
+  <div v-if="busy" role="status" class="loading-line"><span></span><span class="sr-only">{{t('list.updating')}}</span></div>
+  <div class="value-table">
+   <div class="value-head value-grid"><button v-for="key in (['value','plan','rank','cost'] as const)" :key="key" class="sort-button" :aria-label="t(labels[key])+'，'+directionLabel(key)" :aria-pressed="sortKey===key" @click="toggleSort(key)">{{key==='value'?(balanced?t('list.score'):t('list.perDollar')):t(labels[key])}} <span class="sort-icon" aria-hidden="true">{{indicator(key)}}</span></button><span>{{t('sort.conditions')}}</span><span></span></div>
+   <template v-if="data">
+    <article v-for="(row,i) in rows" :key="row.id" class="value-row value-grid" :data-plan-id="row.plan.id" :data-record-id="row.id" :class="{best:i===0&&row.quote&&(!balanced||displayValue(row.quote)!==null),'plan-only-row':!row.quote}">
+     <div v-if="row.quote" class="value-cell"><strong>{{(displayValue(row.quote)??row.quote.multiplier).toFixed(1)}}<span v-if="!balanced||displayValue(row.quote)===null">×</span><sup v-if="row.quote.basis==='research-estimate'">*</sup></strong><div v-if="displayValue(row.quote)!==null" class="value-track" aria-hidden="true"><span :style="{width:((displayValue(row.quote)??0)/max*100)+'%'}"></span></div><span class="score-context">{{t('score.multiplier',{v:row.quote.multiplier.toFixed(1),basis:row.quote.basis==='research-estimate'?t('score.estimate'):t('score.discount')})}}</span></div>
+     <div v-else class="value-cell plan-value"><strong>{{fallbackValue(row.plan)}}</strong><span class="score-context" v-if="row.plan.quota.amount!==null">{{row.plan.quota.kind}}<template v-if="row.plan.quota.reset"> / {{row.plan.quota.reset}}</template></span></div>
+     <div class="plan-cell"><span class="provider-mark" aria-hidden="true"><img v-if="providerIcons[row.plan.providerId]" :src="providerIcons[row.plan.providerId]" alt="" loading="lazy"><template v-else>{{row.provider.slice(0,1)}}</template></span><div class="plan-name"><span>{{row.provider}} · {{td(row.plan.name)}}</span><small>{{row.models||td(row.plan.product)}}</small><span class="mobile-price">{{price(row)}}</span></div></div>
+     <div class="ability-cell"><strong v-if="row.quote?.benchmark?.rank">#{{row.quote.benchmark.rank}}</strong><span v-else class="muted">{{t('score.notListed')}}</span><small v-if="row.quote?.benchmark&&Date.parse(row.quote.benchmark.freshness.validUntil)<=now">{{row.quote.benchmark.measuredAt.slice(5,10)}}</small></div>
+     <div class="cost-cell"><strong>{{price(row)}}</strong><small v-if="row.plan.billing.interval==='year'" class="annual-payment">{{t('detail.annualUpfront')}} {{currency(row.plan)}}{{money(row.plan.billing.upfront)}}</small></div>
+     <div class="condition-cell"><strong v-if="state(row)" class="record-state">{{state(row)}} · {{(row.quote?.verifiedAt??row.plan.freshness.verifiedAt).slice(0,10)}}</strong><span v-if="row.quote">{{condition(row.quote)}}</span><template v-else-if="row.plan.apiRates">{{t('record.apiRates',{input:row.plan.apiRates.inputPerMillion,output:row.plan.apiRates.outputPerMillion})}}</template><span v-else>{{td(row.plan.quota.notes)}}</span></div>
+     <button class="row-arrow" :aria-label="t('record.view',{plan:td(row.plan.name),model:row.quote?.model.name??''})" @click="open(row)">→</button>
+    </article>
+    <div v-if="!rows.length" class="empty-state"><h2>{{t('list.empty')}}</h2><p>{{t('list.emptyHint')}}</p><button class="solid-button" @click="emit('reset')">{{t('list.clearFilters')}}</button></div>
+   </template>
+   <div v-else class="loading-rows" :aria-label="t('list.loadingRows')"><div v-for="i in 7" :key="i"><span></span><span></span><span></span></div></div>
+  </div>
+  <div class="results-note"><span>{{t('record.note')}}</span><span v-if="data">{{t('record.total',{n:planCount,scenarios:quotes.length})}}</span></div>
+ </section>
 </template>

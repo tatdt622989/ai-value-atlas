@@ -31,11 +31,19 @@ test('Mongo snapshots, CAS, lease and public API work together', {skip:!enabled}
   const status=await app.request('/api/v1/status');assert.equal(status.status,200);
   assert.equal(response.headers.get('cache-control'),'no-store');assert.ok(response.headers.get('content-security-policy'));
   const catalog=await (await app.request('/api/v1/catalog')).json() as any;assert.deepEqual(catalog.locks,[]);assert.ok(catalog.evidence.every((e:any)=>e.excerpt===''));
-  const historical=structuredClone(first);historical.benchmarks[0].freshness.validUntil=new Date(Date.now()-1000).toISOString();
+  const historical=structuredClone(first);
+  for(const x of [...historical.plans,...historical.research,...historical.rateCards,...historical.offers,...historical.benchmarks])x.freshness.validUntil=new Date(Date.now()-1000).toISOString();
   await store.publish(historical,first.version,'test','Retain the original benchmark after its review deadline');
   const full=await (await app.request('/api/v1/catalog?includeExpired=true')).json() as any;
   const current=await (await app.request('/api/v1/catalog')).json() as any;
   assert.deepEqual(full.benchmarks,historical.benchmarks);
   assert.ok(!current.benchmarks.some((b:any)=>b.id===historical.benchmarks[0].id));
+  for(const category of ['all','coding','webdev','frontend']){
+   const visible=await (await app.request('/api/v1/value?category='+category)).json() as any;
+   const expected=historical.plans.filter(p=>category==='all'||p.categories.includes(category as any)).map(p=>p.id).sort();
+   assert.deepEqual([...new Set([...visible.quotes,...visible.unknown].map((r:any)=>r.plan.id))].sort(),expected);
+   assert.ok(visible.quotes.some((q:any)=>q.plan.id==='chatgpt-plus'));
+   assert.ok(visible.quotes.some((q:any)=>q.plan.id==='claude-pro'));
+  }
  }finally{await client.db(name).dropDatabase();await client.close();}
 });

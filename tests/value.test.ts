@@ -20,6 +20,15 @@ test('official quota arithmetic agrees with documented same-model reference',()=
  assert.ok(Math.abs(q.quote.multiplier-8.613264427217914)<1e-9);assert.equal(q.quote.calculation.usableUnits,40000);
  const half=valueQuote(seed,offer,prefs({utilization:'half'}),now);if(!half.ok)assert.fail();assert.equal(half.quote.multiplier,q.quote.multiplier/2);
 });
+test('metered scenarios include a fixed monthly fee in value, score cost and payment filters',()=>{
+ const data=structuredClone(seed),source=data.offers.find(o=>o.kind==='metered')!;
+ const base=valueQuote(data,source,prefs({apiSpendUSD:20}),now);assert.ok(base.ok);if(!base.ok)return;
+ const offer={...source,fixedMonthlyUSD:20},paid=valueQuote(data,offer,prefs({apiSpendUSD:20}),now);assert.ok(paid.ok);if(!paid.ok)return;
+ assert.equal(paid.quote.calculation.cash,40);assert.equal(paid.quote.monthlyCost,40);
+ assert.equal(paid.quote.calculation.millionTokens,base.quote.calculation.millionTokens);
+ assert.equal(paid.quote.multiplier,base.quote.multiplier/2);
+ assert.equal(valueQuote(data,offer,prefs({apiSpendUSD:20,budget:30}),now).ok,false);
+});
 test('cache scenario cannot silently reweight observational model mixes',()=>{
  const normal=rankValues(seed,prefs(),now),cached=rankValues(seed,prefs({profile:'cached'}),now);
  for(const q of normal.quotes.filter(q=>q.basis==='research-estimate'))assert.equal(cached.quotes.find(x=>x.id===q.id)?.multiplier,q.multiplier);
@@ -64,6 +73,39 @@ test('a reviewed monthly price change recomputes research value without modifyin
  const quote=rankValues(data,prefs(),now).quotes.find(q=>q.plan.id==='chatgpt-plus')!;
  assert.equal(quote.monthlyCost,40);assert.equal(quote.multiplier,22.37226666666667/2);assert.equal(quote.research!.ratio,22.37226666666667);
  assert.ok(!rankValues(data,prefs({budget:20}),now).quotes.some(q=>q.plan.id==='chatgpt-plus'));
+});
+test('a documented non-USD research conversion uses dollars for scores and budgets',()=>{
+ const data=structuredClone(seed),r=data.research.find(r=>r.planId==='chatgpt-plus')!,p=data.plans.find(p=>p.id===r.planId)!;
+ p.billing.currency='CNY';p.billing.amount=140;p.billing.upfront=140;p.billing.minimumPurchase=140;
+ r.billingToUSD=1/7;r.cash=20;r.upfrontCost=20;r.ratio=5;
+ const result=rankValues(data,prefs({budget:21,upfrontBudget:21}),now),q=result.quotes.find(q=>q.id===r.id)!;
+ assert.ok(q);assert.equal(q.calculation.cash,20);assert.equal(q.upfrontCost,20);assert.equal(q.multiplier,5);
+ delete r.billingToUSD;assert.ok(!rankValues(data,prefs(),now).quotes.some(q=>q.id===r.id));
+});
+test('source-specific token composition stays fixed and utilization scales observed usage',()=>{
+ const data=structuredClone(seed),r=data.research.find(r=>r.planId==='chatgpt-plus')!;
+ r.basis='research-estimate';r.tokenMix={input:.0215,output:.0035,cached:.975};r.millionTokens=100;r.ratio=5;
+ const normal=rankValues(data,prefs(),now).quotes.find(q=>q.id===r.id)!,cached=rankValues(data,prefs({profile:'cached'}),now).quotes.find(q=>q.id===r.id)!,half=rankValues(data,prefs({utilization:'half'}),now).quotes.find(q=>q.id===r.id)!;
+ assert.equal(normal.calculation.millionTokens,100);assert.equal(cached.calculation.millionTokens,100);assert.equal(cached.multiplier,normal.multiplier);
+ assert.equal(normal.calculation.cachedInputShare,.975);assert.equal(normal.calculation.outputShare,.0035);
+ assert.equal(half.calculation.millionTokens,50);assert.equal(half.multiplier,normal.multiplier/2);
+ r.tokenMix={input:.8,output:.2,cached:.5};assert.equal(CatalogSchema.safeParse(data).success,false);
+});
+test('observed usage keeps the measured tokens and cost without extrapolating a month or cache mix',()=>{
+ const data=structuredClone(seed),r=data.research.find(r=>r.planId==='chatgpt-plus')!;
+ r.basis='research-estimate';r.observedUsage={millionTokens:119.146534,equivalentUSD:68.9272,startedAt:'2026-09-18T12:00:00.000Z',endedAt:'2026-09-18T15:59:00.000Z'};
+ r.cash=20;r.ratio=999;r.cachedRatio=888;r.millionTokens=12345;
+ const q=rankValues(data,prefs(),now).quotes.find(q=>q.id===r.id)!,cached=rankValues(data,prefs({profile:'cached'}),now).quotes.find(q=>q.id===r.id)!;
+ assert.equal(q.multiplier,68.9272/20);assert.equal(q.calculation.millionTokens,119.146534);
+ assert.equal(cached.multiplier,q.multiplier);assert.equal(cached.calculation.millionTokens,q.calculation.millionTokens);
+ assert.equal(q.calculation.inputShare,null);assert.equal(q.calculation.outputShare,null);assert.equal(q.calculation.cachedInputShare,null);
+ const half=rankValues(data,prefs({utilization:'half'}),now).quotes.find(q=>q.id===r.id)!;
+ assert.equal(half.multiplier,q.multiplier/2);assert.equal(half.calculation.millionTokens,119.146534/2);
+ r.observedUsage.projectionFactor=5;
+ const projected=rankValues(data,prefs(),now).quotes.find(q=>q.id===r.id)!;
+ assert.equal(projected.multiplier,q.multiplier*5);assert.equal(projected.calculation.millionTokens,119.146534*5);
+ assert.equal(r.observedUsage.millionTokens,119.146534);
+ r.observedUsage.endedAt='2026-09-17T12:00:00.000Z';assert.equal(CatalogSchema.safeParse(data).success,false);
 });
 test('category ranking never borrows a different domain and preserves unranked offers',()=>{
  const data=structuredClone(seed);data.benchmarks=data.benchmarks.filter(b=>b.category!=='coding');

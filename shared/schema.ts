@@ -88,11 +88,13 @@ export const OfferSchema=z.object({
   kind:z.enum(['metered','allowance']),
   windows:z.array(z.object({period:z.enum(['five-hours','week','month']),amount:z.number().positive(),reset:z.enum(['rolling','subscription','calendar'])}).strict()).max(3),
   sharedGroup:Id.nullable(),chargeMultiplier:z.number().positive(),
+  fixedMonthlyUSD:z.number().nonnegative().optional(),
   label:z.string().max(60),conditions:z.array(z.string()).min(1).max(10),
   freshness:Freshness,
 }).strict().superRefine((o,ctx)=>{
   if(o.kind==='allowance'&&!o.windows.length)ctx.addIssue({code:'custom',message:'Allowance offers need verified quota windows'});
   if(o.kind==='metered'&&o.windows.length)ctx.addIssue({code:'custom',message:'Metered offers cannot invent included quotas'});
+  if(o.kind!=='metered'&&o.fixedMonthlyUSD)ctx.addIssue({code:'custom',message:'Fixed platform fees apply only to metered scenarios'});
   if(new Set(o.windows.map(w=>w.period)).size!==o.windows.length)ctx.addIssue({code:'custom',message:'Duplicate quota windows'});
 });
 
@@ -100,6 +102,9 @@ export const ResearchValueSchema=z.object({
   id:Id,planId:Id,modelId:Id,originalId:z.string(),sourceFileHash:z.string().regex(/^[a-f0-9]{64}$/),
   basis:z.enum(['research-estimate','research-calculated']),modelLabel:z.string(),label:z.string(),
   tokenInference:z.enum(['model-proxy','disabled']).optional(),
+  billingToUSD:z.number().positive().optional(),
+  tokenMix:z.object({input:z.number().min(0).max(1),output:z.number().min(0).max(1),cached:z.number().min(0).max(1)}).strict().refine(m=>Math.abs(m.input+m.output+m.cached-1)<1e-9,'Token shares must sum to one').optional(),
+  observedUsage:z.object({millionTokens:z.number().positive(),equivalentUSD:z.number().positive(),startedAt:DateTime,endedAt:DateTime,projectionFactor:z.number().positive().optional()}).strict().refine(u=>Date.parse(u.startedAt)<=Date.parse(u.endedAt),'Observation end must follow its start').optional(),
   eligible:z.boolean(),replacedByOfferId:Id.nullable(),monthlyCost:z.number().nonnegative().nullable(),cash:z.number().positive(),upfrontCost:z.number().nonnegative(),
   ratio:z.number().nonnegative().nullable(),cachedRatio:z.number().nonnegative().nullable(),millionTokens:z.number().nonnegative().nullable(),cachedMillionTokens:z.number().nonnegative().nullable(),
   low:z.number().nonnegative().nullable(),high:z.number().nonnegative().nullable(),confidence:z.string(),method:z.string(),warning:z.string(),

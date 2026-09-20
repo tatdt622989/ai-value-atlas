@@ -56,3 +56,8 @@ test('a missing model in the latest board cannot borrow an older snapshot',()=>{
  data.benchmarks=[{...other,freshness:{...other.freshness,verifiedAt:'2026-09-09T00:00:00Z'}},newer];
  assert.equal(modelReference(data,other.modelId,prefs({category:'webdev'}),now),null);
 });
+test('combined ranking preserves a published rank beyond the top twenty',()=>{
+ const data=structuredClone(cat),b=data.benchmarks.find(b=>b.category==='coding')!;
+ data.benchmarks=[{...b,rank:35,rankHigh:38,cohortSize:46}];
+ assert.equal(modelReference(data,b.modelId,prefs(),now)?.rank,35);
+});

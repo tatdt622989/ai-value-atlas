@@ -6,7 +6,6 @@ import { hash, uid } from './store';
 export const ARENA_URL='https://arena.ai/leaderboard/code/webdev';
 export const ARENA_SOURCES={webdev:ARENA_URL,frontend:'https://arena.ai/leaderboard/code/webdev/frontend',coding:'https://arena.ai/leaderboard/agent/code',general:'https://arena.ai/leaderboard/agent/'} as const;
 export const AA_URL='https://artificialanalysis.ai/api/v2/language/models/free';
-export const LEADERBOARD_TOP_N=20;
 export async function fetchSource(url:string,allowedHosts:Set<string>,headers:Record<string,string>={}) {
   let target=new URL(url);
   for(let hop=0;hop<4;hop++) {
@@ -27,7 +26,7 @@ export async function fetchSource(url:string,allowedHosts:Set<string>,headers:Re
 export function makeEvidence(source:Awaited<ReturnType<typeof fetchSource>>,meta:Pick<Evidence,'title'|'publisher'|'kind'>):Evidence {
   return {...meta,id:uid('e'),url:source.url,fetchedAt:source.fetchedAt,sourceUpdatedAt:source.lastModified&&Number.isFinite(Date.parse(source.lastModified))?new Date(source.lastModified).toISOString():null,contentHash:source.contentHash,excerpt:source.text.slice(0,16000),method:'http'};
 }
-export function parseArena(raw:string,catalog:Catalog,evidence:Evidence,category:keyof typeof ARENA_SOURCES='webdev') {
+export function parseArena(raw:string,catalog:Catalog,evidence:Evidence,category:keyof typeof ARENA_SOURCES='webdev',options:{retainPublishedSnapshot?:boolean}={}) {
   const $=load(raw),agent=category==='coding'||category==='general';
   const headers=$('thead').first().text(),heading=$('h1').first().text();
   if(agent?(!headers.includes('Net Improvement')||!headers.includes('Sessions')):(!headers.includes('Rank')||!headers.includes('Score')||!headers.includes('Votes')))throw new Error('Arena table schema changed');
@@ -36,7 +35,8 @@ export function parseArena(raw:string,catalog:Catalog,evidence:Evidence,category
   const date=$('body').text().match(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}, \d{4}/)?.[0];
   if(!date)throw new Error('Arena publication date missing');
   const measuredAt=new Date(`${date} 00:00:00 UTC`).toISOString();
-  if(Date.parse(measuredAt)>Date.parse(evidence.fetchedAt)||Date.parse(evidence.fetchedAt)-Date.parse(measuredAt)>7*86400000)throw new Error('Arena source snapshot is stale or future-dated');
+  const aged=Date.parse(evidence.fetchedAt)-Date.parse(measuredAt)>7*86400000;
+  if(Date.parse(measuredAt)>Date.parse(evidence.fetchedAt)||aged&&!options.retainPublishedSnapshot)throw new Error('Arena source snapshot is stale or future-dated');
   const parsed:Benchmark[]=[],unmatched:string[]=[],belowCutoff:string[]=[];
   const rows=$('tbody tr');
   const rankOf=(cells:ReturnType<typeof $>)=>Number(agent?cells.eq(0).find('span').first().text():cells.eq(0).text());
@@ -47,9 +47,8 @@ export function parseArena(raw:string,catalog:Catalog,evidence:Evidence,category
     const cells=$(row).find('td');if(cells.length!==(agent?12:7))throw new Error('Arena row shape changed');
     const variant=cells.eq(agent?1:2).find('a').first().text().trim();
     const rank=rankOf(cells);if(!Number.isInteger(rank)||rank<=0){unmatched.push(variant+' [unranked]');return;}
-    if(rank>LEADERBOARD_TOP_N){belowCutoff.push(variant);return;}
     const alias=agent?`arena-agent:${variant}`:variant;
-    const matches=catalog.models.filter(m=>m.aliases.includes(alias));
+    const matches=catalog.models.filter(m=>!agent&&m.aliases.some(a=>a.startsWith('arena-webdev:'))?m.aliases.includes(`arena-webdev:${variant}`):m.aliases.includes(alias));
     if(matches.length>1)throw new Error('Ambiguous Arena aliases');
     const model=matches[0];if(!model){unmatched.push(variant);return;}
     const scoreText=cells.eq(agent?2:3).text();
@@ -63,7 +62,7 @@ export function parseArena(raw:string,catalog:Catalog,evidence:Evidence,category
       benchmarkVersion:agent?`agent-${category}-net-improvement`:`webdev-${category==='frontend'?'frontend':'overall'}`,variant,
       harness:agent?'arena-agent':variant.includes('codex-harness')?'codex-harness':'arena-webdev',score,rank,cohortSize,rankLow,rankHigh,
       sampleSize:Number(cells.eq(agent?8:4).text().replaceAll(',','')),confidenceLow:score-Number(agent?match[2]:match[3]),confidenceHigh:score+Number(match[2]),outputTokensPerSecond:null,measuredAt,
-      freshness:{verifiedAt:evidence.fetchedAt,validUntil:new Date(Math.min(Date.parse(evidence.fetchedAt)+7*86400000,Date.parse(measuredAt)+7*86400000)).toISOString(),effectiveFrom:null,expiresAt:null,evidenceIds:[evidence.id],status:'verified'}}));
+      freshness:{verifiedAt:evidence.fetchedAt,validUntil:new Date(aged?Date.parse(evidence.fetchedAt)+86400000:Math.min(Date.parse(evidence.fetchedAt)+7*86400000,Date.parse(measuredAt)+7*86400000)).toISOString(),effectiveFrom:null,expiresAt:null,evidenceIds:[evidence.id],status:aged?'pending':'verified'}}));
   });
   if(parsed.length<2)throw new Error('Arena returned insufficient mapped rows');
   if(new Set(parsed.map(x=>x.id)).size!==parsed.length)throw new Error('Ambiguous Arena aliases');
@@ -73,9 +72,9 @@ const AAEnvelope=z.object({intelligence_index_version:z.number(),pagination:z.ob
 export function parseArtificialAnalysis(body:unknown,catalog:Catalog,evidence:Evidence) {
   const parsed=AAEnvelope.parse(body),benchmarks:Benchmark[]=[];
   const unmatched=new Set<string>();
-  // Same bar as Arena boards: only each index's top N enter the catalog.
+  // Keep every exact model mapping; rank must not determine data coverage.
   for(const [category,key] of [['coding','artificial_analysis_coding_index'],['general','artificial_analysis_intelligence_index']] as const) {
-    const ranked=parsed.data.filter(m=>m.evaluations[key]!==null).sort((a,b)=>b.evaluations[key]!-a.evaluations[key]!).slice(0,LEADERBOARD_TOP_N);
+    const ranked=parsed.data.filter(m=>m.evaluations[key]!==null).sort((a,b)=>b.evaluations[key]!-a.evaluations[key]!);
     for(const m of ranked) {
       const model=catalog.models.find(x=>x.aliases.includes(`aa:${m.slug}`));
       if(!model){unmatched.add(m.slug);continue;}

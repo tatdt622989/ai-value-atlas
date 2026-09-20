@@ -2,7 +2,6 @@ import { type AtlasStore, uid } from './store';
 import { ARENA_SOURCES,AA_URL,fetchSource,makeEvidence,parseArena,parseArtificialAnalysis } from './sources';
 import { aiReady,research,review } from './ai';
 import {newProposal,evaluateProposal,publishProposal} from './policy';
-import {LEADERBOARD_TOP_N} from './sources';
 import {VALUE_SOURCES,parseValueSources,applyValueFacts,sourcesUnchanged, type collectValueSources} from './value-sources';
 import type { Evidence, Benchmark } from '../shared/schema';
 
@@ -45,7 +44,7 @@ export async function updateLoop(store:AtlasStore,trigger='manual') {
       const fetched=await fetchSource(url,hosts);const ev=makeEvidence(fetched,{title:`Arena ${category} 排行榜`,publisher:'Arena',kind:'benchmark'});
       const parsed=parseArena(fetched.raw,current,ev,category as keyof typeof ARENA_SOURCES);benchmarkChanges.push(...parsed.benchmarks);benchmarkEvidence.push(ev);success++;
       await store.db.collection('evidence').insertOne({...ev,raw:fetched.raw,runId:id});
-      notes.push(`Arena ${category} 已解析前 ${LEADERBOARD_TOP_N} 名中 ${parsed.benchmarks.length} 個已映射模型；${parsed.unmatched.length} 個新／未映射版本保留待審；${parsed.belowCutoff.length} 個在 20 名以外未收錄。`);
+      notes.push(`Arena ${category} 已解析完整榜單中 ${parsed.benchmarks.length} 個已映射模型；${parsed.unmatched.length} 個新／未映射版本保留待審。`);
       await store.db.collection('discoveries').insertOne({runId:id,source:`arena-${category}`,names:parsed.unmatched,createdAt:startedAt});
     } catch(e) {failures++;notes.push(`Arena ${category}: ${(e as Error).message}`);}
     if(process.env.ARTIFICIAL_ANALYSIS_API_KEY) {
@@ -61,7 +60,7 @@ export async function updateLoop(store:AtlasStore,trigger='manual') {
           if(!parsed.pagination.has_more) break;
           if(parsed.pagination.page!==page||page>=20)throw new Error('AA pagination overflow or mismatch');page++;
         }
-        benchmarkChanges.push(...staged);benchmarkEvidence.push(...evs);success++;notes.push(`Artificial Analysis 已解析各指數前 ${LEADERBOARD_TOP_N} 名共 ${staged.length} 筆能力資料。`);
+        benchmarkChanges.push(...staged);benchmarkEvidence.push(...evs);success++;notes.push(`Artificial Analysis 已解析各指數共 ${staged.length} 筆能力資料。`);
       }catch(e){failures++;notes.push(`Artificial Analysis: ${(e as Error).message}`);}
     }else notes.push('Artificial Analysis 未設定 key；未取得 AA 補充評測與速度資料。Arena 四個分類独立蒐集。');
     // Deterministic adapters publish independently from LLM research, only when opt-in is enabled.

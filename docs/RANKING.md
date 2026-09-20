@@ -5,11 +5,13 @@
 ## 兩個視角
 
 - 綜合推薦：同領域能力 + 實際每美元 Token 可用量。
-- 優惠倍率：已採用研究的 API 等值倍率；次數、tokens 和平台 credits 不放入金額欄。沒有金額倍率的方案仍保留價格、條件及来源。
+- 優惠倍率：已採用研究的 API 等值倍率；次數、tokens 和平台 credits 不放入主欄。主表僅顯示同時具備正倍率與 0–100 推薦分數的現行情境；缺項資料完整保留。
 
-全部研究與歷史數字保留可見。`dataStatus=historical`（停用、被替代或只從舊審核註記恢復的倍率）不參與推薦分數、效率百分位母體或目前價值排序，也不顯示最佳標示。原估算放在使用條件欄並標明未採用；這與僅超過複查期限而仍採用的 `review` 狀態不同。
+全部研究與歷史數字保存在完整資料與詳情。`dataStatus=historical`（停用、被替代或只從舊審核註記恢復的倍率）不參與推薦分數、效率百分位母體或目前價值排序，也不顯示最佳標示。主表只呈現採用中的計算，不呈現歷史倍率或核驗敘事；這與僅超過複查期限而仍採用的 `review` 狀態不同。
 
-混合模型套餐保留原模型標籤、倍率、研究依據及名次參考；沒有拆分用量時綜合分數為空，留在同一列表，不捏造 Token 數。價格、原始研究採納權重與觀測量不因演算法改版而改寫。
+混合模型套餐保留原模型標籤、倍率與研究依據；沒有拆分用量而無法計算分數時，暫時隱藏該情境，不捏造 Token 數。價格、原始研究採納權重與觀測量不因演算法改版而改寫。
+
+依使用者 2026-09-21 指示「有缺就隱藏，先上線」，發布驗收執行 `pnpm atlas coverage <完整快照.json> --visible --strict`；全部／General／Coding／WebDev／Frontend 與一般／快取檢視都須有完整列。主要 DOM 必須等於符合 `isCompleteValueQuote` 的情境 ID，缺項情境與方案列入隱藏清單。完整 catalog 仍做保留檢查；不帶 `--visible` 的報告保留全部缺項，不把隱藏稱為補齊。來源依據與實際 DOM 另行核對。
 
 ## 算法
 
@@ -34,11 +36,15 @@
 | WebDev | https://arena.ai/leaderboard/code/webdev | WebDev Overall 人類偏好評測 |
 | Frontend | https://arena.ai/leaderboard/code/webdev/frontend | Frontend 分類人類偏好評測 |
 
-本次取得的來源發布日期均為 2026-09-08，抓取日為 2026-09-11。WebDev 和 Frontend 各映射 20 個確切模型版本，Coding 與綜合各 14 個。WebDev 的 AutoEval 無正式名次列不參與百分位。未知、不同 reasoning level 或未對應版本寫入 discoveries，不進行模糊映射。
+收集器保留完整榜單中所有可精確對應的模型，沒有前 20 名截斷。來源的 cohortSize 採整張正式名次榜，不能以本站映射數取代。WebDev AutoEval 無正式名次列不參與百分位。不同 reasoning level／harness 使用明確別名，不做模糊比對。
 
-例：Hy4 在 Coding 是 #10、WebDev #13、Frontend #11。GPT-6 Astra 在 Coding #2、WebDev／Frontend #1。全量原始 HTML 與 hash 保存於 Mongo evidence，匯入經 staged_catalogs 審核並留下快照。
+每日 collector 已包含四張榜單；AUTO_PUBLISH=false 時更新仍待審核。自動採納要求來源日期最多 7 天。編輯明確採納來源目前發布的較舊快照時，保留真正的量測日期並標記 pending，不把抓取日當測試日期。
 
-每日 collector 已包含四張榜單；AUTO_PUBLISH=false 時更新仍待審核。來源日期最多 7 天，不會因抓取成功便把舊榜單當成今天新測試。AA 可作後續交叉比對與速度資料，本次不依賴 AA API key。
+非美元研究需要有來源的 billingToUSD 換算係數；分數、預算與 API 等值以 USD 計算，價格欄保留原幣別。來源若明示特定 token 組成，用 tokenMix 保存輸入、輸出與快取比例，總和須為 1。來源情境不隨全站快取選項被重寫；實際使用率同時作用於倍率與可用 Token 數。
+
+有原始帳單金額及 tokens 的實測，使用 `observedUsage` 保存原值與實際起訖時間，不隨一般／快取選項重新分配。不把一個 5h 窗口自動擴成整月；另有官方依據的外推才保存 `projectionFactor`，並在研究方法中說明。只知道總 tokens 時，可以呈現按所有適用費率最小值計算的 API 金額下界，但必須標示為下界，不能聲稱來源實測了 100% 快取。
+
+席位費加用量費的方案，`fixedMonthlyUSD` 納入實付現金與分數分母。`apiSpendUSD` 僅是模型用量預算，席位費不能買到額外 tokens；每席成本與最低合約前期付款分別保留。純加購或具名合約案例須在情境標籤及詳情限定適用範圍。
 
 ## 已知限制
 

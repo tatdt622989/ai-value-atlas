@@ -65,12 +65,11 @@ function boardEntry(catalog:Catalog,modelId:string,category:Benchmark['category'
 export function modelReference(catalog:Catalog,modelId:string,prefs:ValuePreferences,now:Date,retained=false){
   if(prefs.category!=='all')return boardEntry(catalog,modelId,prefs.category,now,retained);
   // On the combined view, a model absent from the general board falls back to its
-  // first available secondary board (coding, then webdev, then frontend). The
-  // cohort is capped at the 20-entry collection window so a rank on a large
-  // secondary board is not inflated against the general board's smaller cohort.
+  // first available secondary board (coding, then webdev, then frontend).
+  // Keep the source's complete cohort; a collection cutoff must not invalidate lower ranks.
   for(const category of CATEGORY_FALLBACK){
     const hit=boardEntry(catalog,modelId,category,now,retained);
-    if(hit)return category==='general'?hit:{...hit,cohortSize:Math.min(hit.cohortSize??20,20)};
+    if(hit)return hit;
   }
   return null;
 }
@@ -91,12 +90,13 @@ export function valueQuote(catalog:Catalog,offer:Offer,prefs:ValuePreferences,no
   const platformMix=blendedRate(rate,prefs),referenceMix=blendedRate(reference,prefs);
   if(platformMix===null||referenceMix===null)return {ok:false as const,reason:'快取或 context 費率尚未核實'};
   if(platformMix<=0||referenceMix<=0)return {ok:false as const,reason:'免費或零費率不換算為無限倍'};
-  const cash=offer.kind==='metered'?prefs.apiSpendUSD:monthlyPayment(plan);
+  const usageCash=offer.kind==='metered'?prefs.apiSpendUSD:monthlyPayment(plan);
+  const cash=usageCash+(offer.kind==='metered'?(offer.fixedMonthlyUSD??0):0);
   if(cash<=0)return {ok:false as const,reason:'免費方案不以無限倍參與排行'};
   let usableUnits:number;
   let limitingWindow:string;
   if(offer.kind==='metered'){
-    usableUnits=(cash-plan.billing.feeFixed)/(1+plan.billing.feePercent/100);
+    usableUnits=(usageCash-plan.billing.feeFixed)/(1+plan.billing.feePercent/100);
     limitingWindow='按用量';
   }else{
     const windowCounts={'five-hours':Math.floor(28*24/5),week:4,month:1};
@@ -108,7 +108,7 @@ export function valueQuote(catalog:Catalog,offer:Offer,prefs:ValuePreferences,no
   const millionTokens=usableUnits/(platformMix*offer.chargeMultiplier);
   const equivalentUSD=millionTokens*referenceMix;
   const multiplier=equivalentUSD/cash;
-  const monthlyCost=offer.kind==='metered'?null:cash;
+  const monthlyCost=offer.kind==='metered'&&!offer.fixedMonthlyUSD?null:cash;
   const upfront=plan.billing.interval==='year'?plan.billing.upfront*(1+plan.billing.feePercent/100)+plan.billing.feeFixed:Math.max(monthlyCost??0,plan.billing.upfront,plan.billing.minimumPurchase??0);
   if(prefs.budget!==null&&(plan.billing.minimumPurchase===null||upfront>prefs.budget&&plan.billing.interval!=='year'||monthlyCost!==null&&monthlyCost>prefs.budget))return {ok:false as const,reason:'超過付款上限或最低付款尚未核實'};
   if(prefs.upfrontBudget!==null&&(plan.billing.minimumPurchase===null||upfront>prefs.upfrontBudget))return {ok:false as const,reason:'超過前期付款上限或門檻未核實'};
@@ -140,9 +140,11 @@ export function rankValues(catalog:Catalog,prefs:ValuePreferences,now=new Date()
     const plan=catalog.plans.find(p=>p.id===r.planId)!,model=catalog.models.find(m=>m.id===r.modelId)!,provider=catalog.providers.find(p=>p.id===plan.providerId)!;
     if(!retained&&plan.availability!=='public')continue;
     if(!retained&&(!isFresh(r.freshness,now)||!isFresh(plan.freshness,now))){excluded.push({id:r.id,reason:'原始研究或價格已達複查期限；原值保留於資料庫'});continue;}
-    const cash=r.monthlyCost===null?r.cash:monthlyPayment(plan);
+    if(plan.billing.currency!=='USD'&&r.billingToUSD===undefined)continue;
+    const fx=r.billingToUSD??1;
+    const cash=r.monthlyCost===null?r.cash:monthlyPayment(plan)*fx;
     const monthlyCost=r.monthlyCost===null?null:cash;
-    const upfrontCost=Math.max(r.upfrontCost,plan.billing.upfront,monthlyCost??0);
+    const upfrontCost=Math.max(r.upfrontCost,plan.billing.upfront*fx,monthlyCost??0);
     if(cash<=0)continue;
     if(prefs.category!=='all'&&!plan.categories.includes(prefs.category)||prefs.providerId&&plan.providerId!==prefs.providerId)continue;
     if(prefs.query&&![plan.name,r.modelLabel,provider.name].join(' ').toLowerCase().includes(prefs.query.toLowerCase().trim()))continue;
@@ -153,12 +155,13 @@ export function rankValues(catalog:Catalog,prefs:ValuePreferences,now=new Date()
     if(prefs.minTokensPerSecond!==null&&(!speed?.outputTokensPerSecond||speed.outputTokensPerSecond<prefs.minTokensPerSecond))continue;
     if(prefs.minRank!==null&&(!benchmark?.rank||benchmark.rank>prefs.minRank))continue;
     // Observational model mixes cannot be renormalized to a fabricated cache split.
-    const sourceBase=prefs.profile==='cached'&&r.basis==='research-calculated'?r.cachedRatio:r.ratio;
+    const projection=r.observedUsage?.projectionFactor??1;
+    const sourceBase=r.observedUsage?r.observedUsage.equivalentUSD*projection/r.cash:!r.tokenMix&&prefs.profile==='cached'&&r.basis==='research-calculated'?r.cachedRatio:r.ratio;
     const base=sourceBase??(retained?(r.ratio??historicalResearchRatio(r)):null);
     if(base===null||base<=0)continue;
     const utilization=r.monthlyCost===null?1:utilizationFactor[prefs.utilization];
     const multiplier=base*utilization*r.cash/cash;
-    let millionTokens=r.basis==='research-estimate'?null:(prefs.profile==='cached'?r.cachedMillionTokens:r.millionTokens);
+    let millionTokens=r.observedUsage?r.observedUsage.millionTokens*projection:(r.tokenMix?r.millionTokens:r.basis==='research-estimate'?null:(prefs.profile==='cached'?r.cachedMillionTokens:r.millionTokens));
     if(millionTokens===null&&r.basis==='research-estimate'&&r.tokenInference!=='disabled'){
       // Multi-source estimates are dollar-denominated; convert back to comparable tokens using the model's official API blend.
       const modelProvider=catalog.models.find(m=>m.id===r.modelId)?.providerId;
@@ -166,11 +169,13 @@ export function rankValues(catalog:Catalog,prefs:ValuePreferences,now=new Date()
         .sort((a,b)=>(a.providerId===modelProvider?0:1)-(b.providerId===modelProvider?0:1)||a.id.localeCompare(b.id))[0];
       const refMix=refCard?blendedRate(refCard,prefs):null;
       if(refMix!==null&&refMix>0)millionTokens=multiplier*cash/refMix;
+    }else if(millionTokens!==null){
+      millionTokens*=utilization;
     }
     quotes.push({id:r.id,plan,model:{...model,name:r.modelLabel},provider,multiplier,monthlyCost,upfrontCost,benchmark,basis:r.basis,research:r,dataStatus:sourceBase===null||!r.eligible||r.replacedByOfferId?'historical':!isFresh(r.freshness,now)||!isFresh(plan.freshness,now)?'review':'current',
       offer:{id:r.id,kind:'research',label:r.label,sharedGroup:r.sharedGroup,conditions:r.conditions},evidenceIds:[...new Set([...r.freshness.evidenceIds,...plan.freshness.evidenceIds])],
       verifiedAt:r.originalCheckedAt,validUntil:[r.freshness.validUntil,plan.freshness.validUntil].sort()[0],
-      calculation:{version:'research-import-1',profile:prefs.profile,inputShare:.8,outputShare:.2,cachedInputShare:prefs.profile==='cached'?.64:0,utilization,cash,usableUnits:0,platformMix:null,referenceMix:null,chargeMultiplier:1,millionTokens,equivalentUSD:multiplier*cash,limitingWindow:'原始研究',periodWeeks:4}});
+      calculation:{version:'research-import-1',profile:prefs.profile,inputShare:r.observedUsage&&!r.tokenMix?null:r.tokenMix?r.tokenMix.input+r.tokenMix.cached:.8,outputShare:r.observedUsage&&!r.tokenMix?null:r.tokenMix?.output??.2,cachedInputShare:r.observedUsage&&!r.tokenMix?null:r.tokenMix?.cached??(prefs.profile==='cached'?.64:0),utilization,cash,usableUnits:0,platformMix:null,referenceMix:null,chargeMultiplier:1,millionTokens,equivalentUSD:multiplier*cash,limitingWindow:r.observedUsage?'實測期間':r.tokenMix?'研究負載':'原始研究',periodWeeks:4}});
   }
   const rankingMode=prefs.ranking;
   const universe=calibrating?quotes:rankValues(catalog,{...prefs,ranking:'value',budget:null,upfrontBudget:null,allowAnnual:true,providerId:null,query:'',minRank:null,minTokensPerSecond:null},now,true,retained).quotes;
@@ -230,7 +235,17 @@ function withPlanApiOffers(catalog:Catalog,prefs:ValuePreferences,now:Date,retai
 }
 /** Every catalog plan remains in the primary result; review status never removes it. */
 export function rankCatalogValues(catalog:Catalog,prefs:ValuePreferences,now=new Date()):ValueResult{
- return rankValues(catalog,prefs,now,false,true);
+ const result=rankValues(catalog,prefs,now,false,true);
+ // The catalog retains every research record for audit. The primary comparison
+ // presents adopted calculations only, never retired ratios recovered from notes.
+ const quotes=result.quotes.filter(q=>q.dataStatus!=='historical');
+ const visible=new Set([...quotes.map(q=>q.plan.id),...result.unknown.map(q=>q.plan.id)]);
+ const unknown=[...result.unknown];
+ for(const plan of catalog.plans){
+  if(visible.has(plan.id)||!catalogPlanMatches(catalog,plan,prefs,now))continue;
+  unknown.push({plan,modelNames:planModelNames(catalog,plan),money:planMoney(plan,prefs),reason:'缺少可採用的現行倍率計算'});
+ }
+ return {...result,quotes,unknown};
 }
 export function catalogPlanMatches(catalog:Catalog,p:Plan,prefs:ValuePreferences,now=new Date()){
  if(prefs.providerId&&p.providerId!==prefs.providerId||prefs.category!=='all'&&!p.categories.includes(prefs.category))return false;
@@ -248,7 +263,7 @@ export type ValueQuote=Omit<OfficialQuote,'basis'|'offer'|'calculation'|'dataSta
  research:ResearchValue|null;
  dataStatus?:'current'|'review'|'historical';
  offer:Pick<Offer,'id'|'label'|'conditions'|'sharedGroup'> & {kind:'metered'|'allowance'|'research'};
- calculation:Omit<OfficialQuote['calculation'],'millionTokens'|'platformMix'|'referenceMix'> & {millionTokens:number|null;platformMix:number|null;referenceMix:number|null};
+ calculation:Omit<OfficialQuote['calculation'],'millionTokens'|'platformMix'|'referenceMix'|'inputShare'|'outputShare'|'cachedInputShare'> & {millionTokens:number|null;platformMix:number|null;referenceMix:number|null;inputShare:number|null;outputShare:number|null;cachedInputShare:number|null};
 };
 export type RankedValueQuote=ValueQuote & {recommendation:ReturnType<typeof recommendation>};
 export type ValueResult={ranking:{mode:ValuePreferences['ranking'];weights:typeof RANKING_WEIGHTS;version:string;rankedCount:number;referenceCount:number};version:string;asOf:string;calculationVersion:string;preferences:ValuePreferences;quotes:RankedValueQuote[];excluded:{id:string;reason:string}[];unknown:{plan:Plan;modelNames:string[];money:MoneyComparison;reason:string}[];evidence:Catalog['evidence']};

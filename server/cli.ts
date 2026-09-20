@@ -4,20 +4,22 @@ import {CatalogSchema} from '../shared/schema';
 import {ProposalSchema,evaluateProposal,publishProposal,getField,editorialReview} from './policy';
 import {updateLoop} from './loop';
 import {freshnessAudit} from '../shared/recommend';
+import {rankingCoverage} from '../shared/coverage';
 import {assertCatalogPreserved,PreservationDecisionSchema} from '../shared/preservation';
 import {z} from 'zod';
 
 const [command,...args]=process.argv.slice(2);
 if(!command||command==='help'){
-  console.log('atlas seed | status | freshness [catalog.json] [--strict] | export <file> | import-legacy <html> | update | proposals | source-reviews | discoveries | stages | show-stage <id> <file> | submit <proposal.json> | check <id> | publish <id> --actor <name> --manual [--lock] | stage <catalog.json> --reason <text> [--loss-decisions <file.json>] | publish-stage <id> --actor <name> | unlock <path> --reason <text> --actor <name> | rollback <version> --reason <text> --actor <name>');
+  console.log('atlas seed | status | freshness [catalog.json] [--strict] | coverage [catalog.json] [--strict] [--visible] | export <file> | import-legacy <html> | update | proposals | source-reviews | discoveries | stages | show-stage <id> <file> | submit <proposal.json> | check <id> | publish <id> --actor <name> --manual [--lock] | stage <catalog.json> --reason <text> [--loss-decisions <file.json>] | publish-stage <id> --actor <name> | unlock <path> --reason <text> --actor <name> | rollback <version> --reason <text> --actor <name>');
   process.exit(0);
 }
 const option=(key:string)=>{const i=args.indexOf(key);return i>=0?args[i+1]:undefined;};
 const actor=option('--actor');const reason=option('--reason');
 // A catalog file can be audited without MongoDB; without one the published version is read below.
-const auditFile=command==='freshness'?args.find(a=>!a.startsWith('--')):undefined;
+const auditFile=['freshness','coverage'].includes(command)?args.find(a=>!a.startsWith('--')):undefined;
 if(auditFile){
-  const audit=freshnessAudit(CatalogSchema.parse(JSON.parse(await fs.readFile(auditFile,'utf8'))));
+  const catalog=CatalogSchema.parse(JSON.parse(await fs.readFile(auditFile,'utf8')));
+  const audit=command==='coverage'?rankingCoverage(catalog,new Date(),args.includes('--visible')):freshnessAudit(catalog);
   console.log(JSON.stringify(audit,null,2));
   if(args.includes('--strict')&&!audit.complete)process.exitCode=1;
   process.exit();
@@ -32,6 +34,11 @@ try {
       const audit=freshnessAudit(await store.catalog());
       result=audit;
       // --strict fails the run so a partial update cannot be reported as complete.
+      if(args.includes('--strict')&&!audit.complete)process.exitCode=1;
+      break;
+    }
+    case 'coverage':{
+      const audit=rankingCoverage(await store.catalog(),new Date(),args.includes('--visible'));result=audit;
       if(args.includes('--strict')&&!audit.complete)process.exitCode=1;
       break;
     }

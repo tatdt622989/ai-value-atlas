@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 import {CatalogSchema,ValuePreferencesSchema} from '../shared/schema';
-import {rankCatalogValues,historicalResearchRatio} from '../shared/value';
+import {rankCatalogValues} from '../shared/value';
 const seed=CatalogSchema.parse(JSON.parse(fs.readFileSync('data/catalog.json','utf8'))),now=new Date('2026-10-01T00:00:00Z');
 const prefs=(value:unknown={})=>ValuePreferencesSchema.parse(value);
 const ids=(result:ReturnType<typeof rankCatalogValues>)=>new Set([...result.quotes.map(q=>q.plan.id),...result.unknown.map(q=>q.plan.id)]);
@@ -21,27 +21,25 @@ test('the primary catalog contains every plan after review deadlines, including 
  for(const provider of seed.providers){const actual=ids(rankCatalogValues(seed,prefs({providerId:provider.id}),now));assert.deepEqual([...actual].sort(),seed.plans.filter(p=>p.providerId===provider.id).map(p=>p.id).sort(),provider.id);}
  assert.deepEqual(seed,before);assert.ok(result.quotes.some(q=>q.plan.id==='chatgpt-plus'));assert.ok(result.quotes.some(q=>q.plan.id==='claude-pro'));
 });
-test('all research with a recorded multiplier remains a primary scenario, even if it was superseded or marked ineligible',()=>{
+test('retired research stays in the catalog without appearing as a current primary scenario',()=>{
  const data=structuredClone(seed);for(const r of data.research)r.eligible=false;
- const result=rankCatalogValues(data,prefs(),now);
- for(const r of data.research.filter(r=>(r.ratio??historicalResearchRatio(r)??0)>0))assert.ok(result.quotes.some(q=>q.id===r.id),r.id);
- assert.ok(result.quotes.every(q=>Number.isFinite(q.multiplier)));
- assert.ok(result.quotes.filter(q=>q.research).every(q=>q.dataStatus==='historical'&&q.recommendation.score===null));
+ const before=structuredClone(data),result=rankCatalogValues(data,prefs(),now);
+ assert.ok(result.quotes.every(q=>q.dataStatus!=='historical'));
+ assert.deepEqual([...ids(result)].sort(),data.plans.map(p=>p.id).sort());
+ assert.deepEqual(data,before);
  assert.equal(result.ranking.referenceCount,rankCatalogValues({...data,research:[]},prefs(),now).ranking.referenceCount);
 });
-test('a retired Claude ratio remains numeric in the primary result with its original samples and date',()=>{
+test('a retired Claude ratio cannot return from audit notes, while its plan stays visible',()=>{
  const data=structuredClone(seed),r=data.research.find(r=>r.planId==='claude-pro')!,original=r.ratio!;
  r.ratio=null;r.reviewNotes.push(`本次修正前：ratio=${original}，method=原始研究`);
- const q=rankCatalogValues(data,prefs({query:'Claude Pro'}),now).quotes.find(q=>q.id===r.id)!;
- assert.equal(q.multiplier,original);assert.equal(q.dataStatus,'historical');assert.deepEqual(q.research,r);assert.equal(q.validUntil,r.freshness.validUntil);
- assert.equal(q.recommendation.score,null);
+ const before=structuredClone(r),result=rankCatalogValues(data,prefs({query:'Claude Pro'}),now);
+ assert.ok(!result.quotes.some(q=>q.id===r.id));assert.ok(ids(result).has(r.planId));assert.deepEqual(r,before);
 });
-test('retired high estimates remain visible but cannot outrank adopted monetary values',()=>{
+test('retired high estimates cannot enter the primary list or recommendation reference',()=>{
  const c=structuredClone(seed),r=c.research.find(r=>r.planId==='claude-max20')!;
  r.eligible=false;r.ratio=99999;
- const result=rankCatalogValues(c,prefs({ranking:'value'}),now),index=result.quotes.findIndex(q=>q.id===r.id);
- assert.ok(index>0);assert.ok(result.quotes.slice(index).every(q=>q.dataStatus==='historical'));
- assert.equal(result.quotes[index].recommendation.score,null);assert.ok(ids(result).has(r.planId));
+ const result=rankCatalogValues(c,prefs({ranking:'value'}),now);
+ assert.ok(!result.quotes.some(q=>q.id===r.id));assert.ok(ids(result).has(r.planId));
 });
 test('explicit search, annual and budget filters still apply to all retained rows',()=>{
  const result=rankCatalogValues(seed,prefs({providerId:'anthropic',allowAnnual:false,budget:30}),now);

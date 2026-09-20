@@ -47,7 +47,7 @@ export function freshnessAudit(catalog: Catalog, now = new Date()) {
 export function monthlyCost(p: Plan, prefs: Preferences): number | null {
   let amount = p.billing.amount;
   if (p.kind === 'api') {
-    if (!p.apiRates || prefs.workload.context > p.apiRates.maxContext || p.apiRates.mode !== 'standard') return null;
+    if (!p.apiRates || p.apiRates.maxContext===null || prefs.workload.context > p.apiRates.maxContext || p.apiRates.mode !== 'standard') return null;
     amount = (prefs.workload.inputTokens*p.apiRates.inputPerMillion + prefs.workload.outputTokens*p.apiRates.outputPerMillion)/1e6;
   } else if (p.billing.interval === 'year') amount /= 12;
   else if (p.billing.interval === 'once') return null; // Unknown duration must not be invented.

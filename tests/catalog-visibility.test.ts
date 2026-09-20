@@ -4,6 +4,11 @@ import {rankCatalogValues,historicalResearchRatio} from '../shared/value';
 const seed=CatalogSchema.parse(JSON.parse(fs.readFileSync('data/catalog.json','utf8'))),now=new Date('2026-10-01T00:00:00Z');
 const prefs=(value:unknown={})=>ValuePreferencesSchema.parse(value);
 const ids=(result:ReturnType<typeof rankCatalogValues>)=>new Set([...result.quotes.map(q=>q.plan.id),...result.unknown.map(q=>q.plan.id)]);
+test('an API price record remains visible without fabricating an unrecorded context limit',()=>{
+ const c=structuredClone(seed),plan=c.plans.find(p=>p.apiRates)!;plan.apiRates!.maxContext=null;
+ const parsed=CatalogSchema.parse(c),result=rankCatalogValues(parsed,prefs(),now);
+ assert.ok(ids(result).has(plan.id));assert.equal(parsed.plans.find(p=>p.id===plan.id)!.apiRates!.maxContext,null);
+});
 test('mixed-model community estimates retain their numerical ratio without inventing a model token count',()=>{
  const catalog=structuredClone(seed),study=catalog.research.find(r=>r.planId==='chatgpt-plus')!;
  study.tokenInference='disabled';study.basis='research-estimate';study.ratio=15.2;study.millionTokens=null;

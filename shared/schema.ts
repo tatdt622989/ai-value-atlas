@@ -39,7 +39,7 @@ export const PlanSchema = z.object({
   apiRates: z.object({
     inputPerMillion: z.number().nonnegative(), outputPerMillion: z.number().nonnegative(),
     cachedInputPerMillion: z.number().nonnegative().nullable(),
-    maxContext: z.number().int().positive(), mode: z.enum(['standard', 'batch', 'flex']),
+    maxContext: z.number().int().positive().nullable(), mode: z.enum(['standard', 'batch', 'flex']),
   }).strict().nullable(),
   quota: z.object({
     kind: z.enum(['opaque', 'tokens', 'credits', 'requests', 'payg']),

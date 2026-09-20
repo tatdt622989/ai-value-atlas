@@ -1,8 +1,9 @@
 import type {ValueQuote} from './value';
 
-export const RANKING_VERSION='fair-value-2';
+export const RANKING_VERSION='fair-value-3';
 export const RANKING_WEIGHTS={efficiency:0.6,ability:0.4} as const;
 export function tokenEfficiency(q:ValueQuote){
+  if(q.dataStatus==='historical')return null;
   const n=q.calculation.millionTokens,cash=q.calculation.cash;
   return n!==null&&Number.isFinite(n)&&n>0&&cash>0?n/cash:null;
 }
@@ -19,6 +20,7 @@ export function efficiencyReference(universe:ValueQuote[]){
 }
 export function recommendation(q:ValueQuote,reference:number[]){
   const efficiency=tokenEfficiency(q),ability=abilityPercentile(q);
+  if(q.dataStatus==='historical')return {score:null,efficiency:null,abilityPercentile:ability,efficiencyPercentile:null,reason:'historical-reference'};
   const missing=efficiency===null?'missing-comparable-usage':ability===null?'missing-category-benchmark':reference.length===0?'missing-price-reference':null;
   if(missing)return {score:null,efficiency,abilityPercentile:ability,efficiencyPercentile:null,reason:missing};
   const below=reference.filter(v=>v<efficiency!).length,equal=reference.filter(v=>v===efficiency).length;

@@ -175,6 +175,8 @@ export function rankValues(catalog:Catalog,prefs:ValuePreferences,now=new Date()
   const reference=efficiencyReference(universe);
   const rankedQuotes=quotes.map(q=>({...q,recommendation:recommendation(q,reference)}));
   rankedQuotes.sort((a,b)=>{
+    // Retaining a number does not re-adopt an explicitly retired estimate.
+    if((a.dataStatus==='historical')!==(b.dataStatus==='historical'))return a.dataStatus==='historical'?1:-1;
     if(rankingMode==='balanced'){
       const x=a.recommendation.score,y=b.recommendation.score;
       if(x!==null&&y===null)return -1;

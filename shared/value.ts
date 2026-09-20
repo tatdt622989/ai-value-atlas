@@ -146,8 +146,8 @@ export function rankValues(catalog:Catalog,prefs:ValuePreferences,now=new Date()
     if(prefs.query&&![plan.name,r.modelLabel,provider.name].join(' ').toLowerCase().includes(prefs.query.toLowerCase().trim()))continue;
     if(plan.billing.interval==='year'&&!prefs.allowAnnual)continue;
     if(prefs.budget!==null&&((monthlyCost??upfrontCost)>prefs.budget)||prefs.upfrontBudget!==null&&upfrontCost>prefs.upfrontBudget)continue;
-    const benchmark=modelReference(catalog,r.modelId,prefs,now,retained);
-    const speed=modelSpeed(catalog,r.modelId,now,retained);
+    const benchmark=r.tokenInference==='disabled'?null:modelReference(catalog,r.modelId,prefs,now,retained);
+    const speed=r.tokenInference==='disabled'?null:modelSpeed(catalog,r.modelId,now,retained);
     if(prefs.minTokensPerSecond!==null&&(!speed?.outputTokensPerSecond||speed.outputTokensPerSecond<prefs.minTokensPerSecond))continue;
     if(prefs.minRank!==null&&(!benchmark?.rank||benchmark.rank>prefs.minRank))continue;
     // Observational model mixes cannot be renormalized to a fabricated cache split.

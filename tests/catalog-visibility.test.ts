@@ -13,7 +13,7 @@ test('mixed-model community estimates retain their numerical ratio without inven
  const catalog=structuredClone(seed),study=catalog.research.find(r=>r.planId==='chatgpt-plus')!;
  study.tokenInference='disabled';study.basis='research-estimate';study.ratio=15.2;study.millionTokens=null;
  const quote=rankCatalogValues(catalog,prefs(),now).quotes.find(q=>q.id===study.id)!;
- assert.equal(quote.multiplier,15.2);assert.equal(quote.calculation.millionTokens,null);assert.equal(quote.recommendation.score,null);
+ assert.equal(quote.multiplier,15.2);assert.equal(quote.calculation.millionTokens,null);assert.equal(quote.recommendation.score,null);assert.equal(quote.benchmark,null);
 });
 test('the primary catalog contains every plan after review deadlines, including every provider, annual and ended plans',()=>{
  const before=structuredClone(seed);const result=rankCatalogValues(seed,prefs(),now);

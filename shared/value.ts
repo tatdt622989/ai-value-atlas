@@ -1,8 +1,9 @@
 import type {Catalog,Offer,RateCard,ValuePreferences,ResearchValue,Plan,Benchmark} from './schema';
 import {isFresh} from './recommend';
 import {recommendation,efficiencyReference,RANKING_VERSION,RANKING_WEIGHTS} from './ranking';
+import {planMoney,type MoneyComparison} from './money';
 
-export const CALCULATION_VERSION='official-equivalent-1';
+export const CALCULATION_VERSION='official-equivalent-2';
 export const utilizationFactor={full:1,half:0.5,quarter:0.25};
 // Earlier editorial reviews stored the exact retired ratio in the audit notes.
 // Surface that historical number without changing eligibility or current ratios.
@@ -83,7 +84,7 @@ export function valueQuote(catalog:Catalog,offer:Offer,prefs:ValuePreferences,no
   const dependencies=[plan,offer,rate,reference];
   if(!retained&&dependencies.some(d=>!isFresh(d.freshness,now)))return {ok:false as const,reason:'價格、額度或基準資料已過期'};
   const evidenceIds=[...new Set(dependencies.flatMap(d=>d.freshness.evidenceIds))];
-  if(evidenceIds.some(id=>!catalog.evidence.some(e=>e.id===id&&['official-price','official-terms'].includes(e.kind))))return {ok:false as const,reason:'缺少官方價格或條款證據'};
+  if(dependencies.some(d=>!d.freshness.evidenceIds.some(id=>catalog.evidence.some(e=>e.id===id&&['official-price','official-terms'].includes(e.kind)))))return {ok:false as const,reason:'缺少官方價格或條款證據'};
   if((!retained&&(plan.availability!=='public'||plan.audience!=='individual'))||plan.billing.currency!=='USD')return {ok:false as const,reason:'非一般個人可比較的美元方案'};
   if(plan.billing.interval==='once')return {ok:false as const,reason:'一次性方案缺少可比較期限'};
   if(plan.billing.interval==='year'&&!prefs.allowAnnual)return {ok:false as const,reason:'未納入年繳方案'};
@@ -121,15 +122,16 @@ export function valueQuote(catalog:Catalog,offer:Offer,prefs:ValuePreferences,no
   }};
 }
 export function rankValues(catalog:Catalog,prefs:ValuePreferences,now=new Date(),calibrating=false,retained=false):ValueResult{
+  const apiCatalog=withPlanApiOffers(catalog,prefs,now,retained);
   const quotes:ValueQuote[]=[];const excluded:{id:string;reason:string}[]=[];
-  for(const offer of catalog.offers){
+  for(const offer of apiCatalog.offers){
     const plan=catalog.plans.find(p=>p.id===offer.planId)!;
     const model=catalog.models.find(m=>m.id===offer.modelId)!;
     const provider=catalog.providers.find(p=>p.id===plan.providerId)!;
     if(prefs.category!=='all'&&!plan.categories.includes(prefs.category))continue;
     if(prefs.providerId&&plan.providerId!==prefs.providerId)continue;
     if(prefs.query&&![plan.name,model.name,provider.name,offer.label].join(' ').toLowerCase().includes(prefs.query.toLowerCase().trim()))continue;
-    const result=valueQuote(catalog,offer,prefs,now,retained);
+    const result=valueQuote(apiCatalog,offer,prefs,now,retained);
     if(result.ok)quotes.push({...result.quote,research:null});else excluded.push({id:offer.id,reason:result.reason});
   }
   // User-curated studies are first-class ranking inputs. Retain their estimate basis and original dates.
@@ -194,8 +196,37 @@ export function rankValues(catalog:Catalog,prefs:ValuePreferences,now=new Date()
   const unknown=catalog.plans.filter(p=>{
     if(retained)return !quotes.some(q=>q.plan.id===p.id)&&catalogPlanMatches(catalog,p,prefs,now);
     return p.availability!=='ended'&&!quotes.some(q=>q.plan.id===p.id)&&!catalog.offers.some(o=>o.planId===p.id&&valueQuote(catalog,o,prefs,now).ok)&&!catalog.research.some(r=>r.planId===p.id&&(!query||[p.name,r.modelLabel,catalog.providers.find(v=>v.id===p.providerId)?.name??''].join(' ').toLowerCase().includes(query))&&p.availability==='public'&&r.eligible&&isFresh(r.freshness,now)&&(prefs.profile==='cached'&&r.basis==='research-calculated'?r.cachedRatio:r.ratio)!==null)&&(prefs.allowAnnual||p.billing.interval!=='year')&&(prefs.budget===null||(p.billing.minimumPurchase!==null&&monthlyPayment(p)<=prefs.budget&&Math.max(p.billing.upfront,p.billing.minimumPurchase)<=prefs.budget))&&(prefs.upfrontBudget===null||(p.billing.minimumPurchase!==null&&Math.max(p.billing.upfront,p.billing.minimumPurchase)<=prefs.upfrontBudget))&&prefs.minRank===null&&prefs.minTokensPerSecond===null&&isFresh(p.freshness,now)&&(!prefs.providerId||p.providerId===prefs.providerId)&&(prefs.category==='all'||p.categories.includes(prefs.category))&&(!query||planMatchesQuery(catalog,p,query));
-  }).map(p=>({plan:p,modelNames:planModelNames(catalog,p),reason:p.kind==='free'?'免費方案，不以無限倍排行':'尚無可靠用量，保留方案與來源' }));
-  return {ranking:{mode:rankingMode,weights:RANKING_WEIGHTS,version:RANKING_VERSION,rankedCount:rankedQuotes.filter(q=>q.recommendation.score!==null).length,referenceCount:reference.length},version:catalog.version,asOf:now.toISOString(),calculationVersion:CALCULATION_VERSION,preferences:prefs,quotes:rankedQuotes,excluded,unknown,evidence:catalog.evidence.filter(e=>quotes.some(q=>q.evidenceIds.includes(e.id)||q.benchmark?.freshness.evidenceIds.includes(e.id))||unknown.some(q=>q.plan.freshness.evidenceIds.includes(e.id))).map(e=>({...e,excerpt:''}))};
+  }).map(p=>({plan:p,modelNames:planModelNames(catalog,p),money:planMoney(p,prefs),reason:p.kind==='free'?'免費方案，不以無限倍排行':'金額依平台額度或單位成本呈現；不冒充 API 等值倍率' }));
+  return {ranking:{mode:rankingMode,weights:RANKING_WEIGHTS,version:RANKING_VERSION,rankedCount:rankedQuotes.filter(q=>q.recommendation.score!==null).length,referenceCount:reference.length},version:catalog.version,asOf:now.toISOString(),calculationVersion:CALCULATION_VERSION,preferences:prefs,quotes:rankedQuotes,excluded,unknown,evidence:catalog.evidence.filter(e=>quotes.some(q=>q.evidenceIds.includes(e.id)||q.benchmark?.freshness.evidenceIds.includes(e.id))||unknown.some(q=>q.plan.freshness.evidenceIds.includes(e.id)||q.money.evidenceIds.includes(e.id))).map(e=>({...e,excerpt:''}))};
+}
+/** Connect saved API prices to a same-model, owner-published reference. No reseller can become its own official baseline. */
+function withPlanApiOffers(catalog:Catalog,prefs:ValuePreferences,now:Date,retained:boolean):Catalog{
+ const rates=[...catalog.rateCards],offers=[...catalog.offers];
+ for(const p of catalog.plans){
+  if(!p.apiRates||p.apiRates.mode!=='standard'||p.billing.currency!=='USD'||p.modelIds.length!==1||offers.some(o=>o.planId===p.id))continue;
+  const modelId=p.modelIds[0],owner=catalog.models.find(m=>m.id===modelId)?.providerId;
+  if(catalog.providers.find(provider=>provider.id===owner)?.trust!=='official')continue;
+  const ownRate:RateCard={id:`plan-rate-${p.id}`,modelId,providerId:p.providerId,unit:'USD',inputPerMillion:p.apiRates.inputPerMillion,outputPerMillion:p.apiRates.outputPerMillion,cachedInputPerMillion:p.apiRates.cachedInputPerMillion,contextUpperBound:p.apiRates.maxContext,freshness:p.freshness};
+  let reference:RateCard|undefined;
+  if(owner===p.providerId)reference=ownRate;
+  else{
+   const candidates=catalog.rateCards.filter(r=>r.modelId===modelId&&r.providerId===owner&&r.unit==='USD'&&blendedRate(r,prefs)!==null&&(retained||isFresh(r.freshness,now)));
+   for(const official of catalog.plans.filter(x=>x.providerId===owner&&x.modelIds.length===1&&x.modelIds[0]===modelId&&x.apiRates?.mode==='standard'&&x.billing.currency==='USD'&&(retained||isFresh(x.freshness,now)))){
+    const a=official.apiRates!;candidates.push({id:`plan-rate-${official.id}`,modelId,providerId:owner!,unit:'USD',inputPerMillion:a.inputPerMillion,outputPerMillion:a.outputPerMillion,cachedInputPerMillion:a.cachedInputPerMillion,contextUpperBound:a.maxContext,freshness:official.freshness});
+   }
+   // Different time windows or promotional baselines require an explicit offer; never choose the most flattering price.
+   const mixes=new Set(candidates.map(r=>blendedRate(r,prefs)).filter(x=>x!==null));
+   if(mixes.size===1)reference=candidates.filter(r=>blendedRate(r,prefs)!==null).sort((a,b)=>b.freshness.verifiedAt.localeCompare(a.freshness.verifiedAt))[0];
+  }
+  if(!reference)continue;
+  // Strip apiRates-only fields from the internal rate card.
+  const {inputPerMillion,outputPerMillion,cachedInputPerMillion}=p.apiRates;
+  const platform:RateCard={id:ownRate.id,modelId,providerId:p.providerId,unit:'USD',inputPerMillion,outputPerMillion,cachedInputPerMillion,contextUpperBound:p.apiRates.maxContext,freshness:p.freshness};
+  if(!rates.some(r=>r.id===platform.id))rates.push(platform);
+  if(!rates.some(r=>r.id===reference!.id))rates.push(reference);
+  offers.push({id:`plan-api-${p.id}`,planId:p.id,modelId,rateCardId:platform.id,referenceRateCardId:reference.id,kind:'metered',windows:[],sharedGroup:null,chargeMultiplier:1,label:'同模型 API 費率比較',conditions:[`依輸入／輸出比例及快取情境計算，已計入 ${p.billing.feePercent}% 與 $${p.billing.feeFixed} 費用。`,p.quota.notes],freshness:p.freshness});
+ }
+ return offers.length===catalog.offers.length?catalog:{...catalog,rateCards:rates,offers};
 }
 /** Every catalog plan remains in the primary result; review status never removes it. */
 export function rankCatalogValues(catalog:Catalog,prefs:ValuePreferences,now=new Date()):ValueResult{
@@ -220,4 +251,4 @@ export type ValueQuote=Omit<OfficialQuote,'basis'|'offer'|'calculation'|'dataSta
  calculation:Omit<OfficialQuote['calculation'],'millionTokens'|'platformMix'|'referenceMix'> & {millionTokens:number|null;platformMix:number|null;referenceMix:number|null};
 };
 export type RankedValueQuote=ValueQuote & {recommendation:ReturnType<typeof recommendation>};
-export type ValueResult={ranking:{mode:ValuePreferences['ranking'];weights:typeof RANKING_WEIGHTS;version:string;rankedCount:number;referenceCount:number};version:string;asOf:string;calculationVersion:string;preferences:ValuePreferences;quotes:RankedValueQuote[];excluded:{id:string;reason:string}[];unknown:{plan:Plan;modelNames:string[];reason:string}[];evidence:Catalog['evidence']};
+export type ValueResult={ranking:{mode:ValuePreferences['ranking'];weights:typeof RANKING_WEIGHTS;version:string;rankedCount:number;referenceCount:number};version:string;asOf:string;calculationVersion:string;preferences:ValuePreferences;quotes:RankedValueQuote[];excluded:{id:string;reason:string}[];unknown:{plan:Plan;modelNames:string[];money:MoneyComparison;reason:string}[];evidence:Catalog['evidence']};

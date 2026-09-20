@@ -33,3 +33,5 @@
 .pending-plans{border-color:#d8cbb7}.pending-plans>summary{background:#faf7f1}.pending-plans .unknown-intro{margin:0;padding-top:12px}.pending-plans article>div{min-width:0;overflow-wrap:anywhere}.pending-price{flex-shrink:0;text-align:right}.research-history-row{padding:12px 0;border-bottom:1px solid var(--line)}.research-history-row h4{margin:6px 0}.research-history-row p{font-size:13px;line-height:1.7}
 
 .catalog-total{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}.record-state{display:block;font-size:11px;font-weight:500;color:#806319;margin-bottom:4px}.annual-payment{display:block;white-space:normal;font-size:11px;color:var(--muted);margin-top:4px}.plan-value>strong{font-size:19px;letter-spacing:0}.condition-cell{overflow-wrap:anywhere}.value-row .plan-name{min-width:0}.value-row .cost-cell strong{white-space:normal;font-size:14px}@media(max-width:760px){.catalog-total{margin-left:0}.value-basis{flex-wrap:wrap}.plan-value>strong{font-size:15px}}
+
+.monetary-cell{flex-wrap:wrap;gap:6px 12px}.monetary-cell small{display:block;color:var(--muted);font-size:11px;line-height:1.5}.monetary-cell>span{font-size:13px}

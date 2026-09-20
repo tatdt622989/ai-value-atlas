@@ -46,6 +46,11 @@ export const PlanSchema = z.object({
     amount: z.number().nonnegative().nullable(), reset: z.string().nullable(),
     hardCap: z.boolean(), notes: z.string(),
   }).strict(),
+  monetaryValue: z.object({
+    amount:z.number().nonnegative(),currency:z.string().regex(/^[A-Z]{3}$/),
+    basis:z.enum(['platform-budget','api-observation','retail-credit-value','unit-cost']),
+    period:z.string().min(1),notes:z.string().min(1),freshness:Freshness,
+  }).strict().optional(),
   availability: z.enum(['public', 'waitlist', 'ended']),
   audience: z.enum(['individual', 'team']), purchaseUrl: Url,
   freshness: Freshness,
@@ -120,6 +125,7 @@ export const CatalogSchema = z.object({
   for (const m of c.models) if (!providers.has(m.providerId)) ctx.addIssue({code:'custom',message:`Unknown provider ${m.providerId}`});
   for (const p of c.plans) {
     if (!providers.has(p.providerId) || p.modelIds.some(id=>!models.has(id))) ctx.addIssue({code:'custom',message:`Invalid plan references ${p.id}`});
+    if(p.monetaryValue?.freshness.evidenceIds.some(id=>!evidence.has(id)))ctx.addIssue({code:'custom',message:`Missing monetary evidence ${p.id}`});
   }
   for (const b of c.benchmarks) if (!models.has(b.modelId)) ctx.addIssue({code:'custom',message:`Unknown benchmark model ${b.modelId}`});
   for(const r of c.rateCards)if(!providers.has(r.providerId)||!models.has(r.modelId))ctx.addIssue({code:'custom',message:`Invalid rate card references ${r.id}`});
@@ -128,7 +134,7 @@ export const CatalogSchema = z.object({
     if(!p||!p.modelIds.includes(o.modelId)||!models.has(o.modelId)||!rate||!reference||rate.modelId!==o.modelId||reference.modelId!==o.modelId||reference.unit!=='USD'||(o.kind==='metered'&&rate.unit!=='USD'))ctx.addIssue({code:'custom',message:`Invalid offer references or units ${o.id}`});
     if(reference&&c.providers.find(p=>p.id===reference.providerId)?.trust!=='official')ctx.addIssue({code:'custom',message:`Reference must use official provider ${o.id}`});
   }
-  for (const e of [...c.plans,...c.benchmarks,...c.rateCards,...c.offers,...c.research]) {
+  for (const e of [...c.plans,...c.benchmarks,...c.rateCards,...c.offers,...c.research,...c.plans.filter(p=>p.monetaryValue).map(p=>({id:p.id,freshness:p.monetaryValue!.freshness}))]) {
     if (e.freshness.evidenceIds.some(id=>!evidence.has(id))) ctx.addIssue({code:'custom',message:`Missing evidence for ${e.id}`});
     if (Date.parse(e.freshness.validUntil)<=Date.parse(e.freshness.verifiedAt)) ctx.addIssue({code:'custom',message:`Invalid expiry for ${e.id}`});
     const maxDays='benchmarkName' in e?7:3;

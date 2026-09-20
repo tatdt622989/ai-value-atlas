@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import {computed,ref} from 'vue';
 import type {RankedValueQuote,ValueQuote,ValueResult} from '../../shared/value';
-import type {Plan,Catalog} from '../../shared/schema';
+import {modelReference} from '../../shared/value';
+import type {Plan,Catalog,Benchmark} from '../../shared/schema';
 import {providerIcons} from '../provider-icons';
 import {t,td,collatorLocale} from '../i18n';
 import type {UiKey} from '../locales/ui';
@@ -14,10 +15,14 @@ const max=computed(()=>balanced.value?100:Math.max(...quotes.value.map(q=>q.mult
 const money=(n:number)=>n.toLocaleString('en-US',{maximumFractionDigits:2});
 const currency=(p:Plan)=>p.billing.currency==='USD'?'$':p.billing.currency+' ';
 const condition=(q:ValueQuote)=>q.research?td(q.research.label):q.offer.kind==='metered'?t('cond.officialBaseline'):q.offer.id.startsWith('go-')?t('cond.goWindows'):`${td(q.offer.label)} · ${t('cond.utilWeeks',{u:t(q.calculation.utilization===1?'cond.utilFull':q.calculation.utilization===.5?'cond.utilHalf':'cond.utilQuarter')})}`;
-type Row={id:string;plan:Plan;quote:RankedValueQuote|null;provider:string;models:string};
+type Row={id:string;plan:Plan;quote:RankedValueQuote|null;benchmark:Benchmark|null;provider:string;models:string};
+function planBenchmark(plan:Plan){
+ if(!props.catalog||!props.data)return null;
+ return plan.modelIds.map(id=>modelReference(props.catalog!,id,props.data!.preferences,new Date(props.now),true)).find(b=>b?.rank)??null;
+}
 const baseRows=computed<Row[]>(()=>[
- ...quotes.value.map(q=>({id:q.id,plan:q.plan,quote:q,provider:q.provider.name,models:q.model.name})),
- ...(props.data?.unknown??[]).filter(p=>!quotes.value.some(q=>q.plan.id===p.plan.id)).map(p=>({id:`plan-${p.plan.id}`,plan:p.plan,quote:null,provider:props.catalog?.providers.find(v=>v.id===p.plan.providerId)?.name??p.plan.providerId,models:p.modelNames.join(' / ')})),
+ ...quotes.value.map(q=>({id:q.id,plan:q.plan,quote:q,benchmark:q.benchmark,provider:q.provider.name,models:q.model.name})),
+ ...(props.data?.unknown??[]).filter(p=>!quotes.value.some(q=>q.plan.id===p.plan.id)).map(p=>({id:`plan-${p.plan.id}`,plan:p.plan,quote:null,benchmark:planBenchmark(p.plan),provider:props.catalog?.providers.find(v=>v.id===p.plan.providerId)?.name??p.plan.providerId,models:p.modelNames.join(' / ')})),
 ]);
 const planCount=computed(()=>new Set(baseRows.value.map(r=>r.plan.id)).size);
 function state(row:Row){
@@ -53,7 +58,7 @@ const rows=computed(()=>{
  return [...baseRows.value].sort((a,b)=>{
   let value=0;
   if(sortKey.value==='value')value=compare(a.quote?displayValue(a.quote):null,b.quote?displayValue(b.quote):null);
-  if(sortKey.value==='rank')value=compare(a.quote?.benchmark?.rank??null,b.quote?.benchmark?.rank??null);
+  if(sortKey.value==='rank')value=compare(a.benchmark?.rank??null,b.benchmark?.rank??null);
   if(sortKey.value==='cost')value=compare(a.quote?.monthlyCost??a.plan.billing.amount/(a.plan.billing.interval==='year'?12:1),b.quote?.monthlyCost??b.plan.billing.amount/(b.plan.billing.interval==='year'?12:1));
   if(sortKey.value==='plan')value=(`${a.provider} ${a.plan.name} ${a.models}`).localeCompare(`${b.provider} ${b.plan.name} ${b.models}`,collatorLocale())*direction;
   return value||(b.quote?.multiplier??-1)-(a.quote?.multiplier??-1)||a.id.localeCompare(b.id);
@@ -71,7 +76,7 @@ const rows=computed(()=>{
      <div v-if="row.quote" class="value-cell"><strong>{{(displayValue(row.quote)??row.quote.multiplier).toFixed(1)}}<span v-if="!balanced||displayValue(row.quote)===null">×</span><sup v-if="row.quote.basis==='research-estimate'">*</sup></strong><div v-if="displayValue(row.quote)!==null" class="value-track" aria-hidden="true"><span :style="{width:((displayValue(row.quote)??0)/max*100)+'%'}"></span></div><span class="score-context">{{t('score.multiplier',{v:row.quote.multiplier.toFixed(1),basis:row.quote.basis==='research-estimate'?t('score.estimate'):t('score.discount')})}}</span></div>
      <div v-else class="value-cell plan-value"><strong>{{fallbackValue(row.plan)}}</strong><span class="score-context" v-if="row.plan.quota.amount!==null">{{row.plan.quota.kind}}<template v-if="row.plan.quota.reset"> / {{row.plan.quota.reset}}</template></span></div>
      <div class="plan-cell"><span class="provider-mark" aria-hidden="true"><img v-if="providerIcons[row.plan.providerId]" :src="providerIcons[row.plan.providerId]" alt="" loading="lazy"><template v-else>{{row.provider.slice(0,1)}}</template></span><div class="plan-name"><span>{{row.provider}} · {{td(row.plan.name)}}</span><small>{{row.models||td(row.plan.product)}}</small><span class="mobile-price">{{price(row)}}</span></div></div>
-     <div class="ability-cell"><strong v-if="row.quote?.benchmark?.rank">#{{row.quote.benchmark.rank}}</strong><span v-else class="muted">{{t('score.notListed')}}</span><small v-if="row.quote?.benchmark&&Date.parse(row.quote.benchmark.freshness.validUntil)<=now">{{row.quote.benchmark.measuredAt.slice(5,10)}}</small></div>
+     <div class="ability-cell"><strong v-if="row.benchmark?.rank">#{{row.benchmark.rank}}</strong><span v-else class="muted">{{t('score.notListed')}}</span><small v-if="!row.quote&&row.benchmark">{{catalog?.models.find(m=>m.id===row.benchmark?.modelId)?.name}}</small><small v-if="row.benchmark&&Date.parse(row.benchmark.freshness.validUntil)<=now">{{row.benchmark.measuredAt.slice(5,10)}}</small></div>
      <div class="cost-cell"><strong>{{price(row)}}</strong><small v-if="row.plan.billing.interval==='year'" class="annual-payment">{{t('detail.annualUpfront')}} {{currency(row.plan)}}{{money(row.plan.billing.upfront)}}</small></div>
      <div class="condition-cell"><strong v-if="state(row)" class="record-state">{{state(row)}} · {{(row.quote?.verifiedAt??row.plan.freshness.verifiedAt).slice(0,10)}}</strong><span v-if="row.quote">{{condition(row.quote)}}</span><template v-else-if="row.plan.apiRates">{{t('record.apiRates',{input:row.plan.apiRates.inputPerMillion,output:row.plan.apiRates.outputPerMillion})}}</template><span v-else>{{td(row.plan.quota.notes)}}</span></div>
      <button class="row-arrow" :aria-label="t('record.view',{plan:td(row.plan.name),model:row.quote?.model.name??''})" @click="open(row)">→</button>

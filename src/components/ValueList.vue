@@ -26,7 +26,7 @@ const baseRows=computed<Row[]>(()=>[
  ...(props.data?.unknown??[]).filter(p=>!quotes.value.some(q=>q.plan.id===p.plan.id)).map(p=>({id:`plan-${p.plan.id}`,plan:p.plan,quote:null,benchmark:planBenchmark(p.plan),provider:props.catalog?.providers.find(v=>v.id===p.plan.providerId)?.name??p.plan.providerId,models:p.modelNames.join(' / '),money:props.data?planMoney(p.plan,props.data.preferences):null})),
 ]);
 function monetaryAmount(m:MoneyComparison){return (m.currency==='USD'?'$':m.currency+' ')+(m.amount??0).toLocaleString('en-US',{maximumFractionDigits:6});}
-function moneyLabel(m:MoneyComparison){return t(('money.'+m.kind) as UiKey);}
+function moneyLabel(m:MoneyComparison){return t((m.kind==='api-unit-cost'&&m.unit==='input-million'?'money.api-input-cost':'money.'+m.kind) as UiKey);}
 function moneyUnit(m:MoneyComparison){const key=('money.unit.'+m.unit) as UiKey;return ['month','30 days','million','input-million','platform-million','credit','request'].includes(m.unit)?t(key):td(m.unit);}
 const planCount=computed(()=>new Set(baseRows.value.map(r=>r.plan.id)).size);
 function state(row:Row){

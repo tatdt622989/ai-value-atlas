@@ -34,7 +34,7 @@ function state(row:Row){
  if(p.freshness.status==='pending'||q?.dataStatus==='review'||Date.parse(q?.validUntil??p.freshness.validUntil)<=props.now)return t('record.review');
  return '';
 }
-function fallbackValue(p:Plan){return p.kind==='free'?t('list.free'):p.quota.amount!==null?(p.quota.amount>=1e6?`${money(p.quota.amount/1e6)} M`:money(p.quota.amount)):p.billing.interval==='usage'?t('list.usageBased'):t('record.variableQuota');}
+function fallbackValue(p:Plan){return p.quota.amount!==null?(p.quota.amount>=1e6?`${money(p.quota.amount/1e6)} M`:money(p.quota.amount)):p.kind==='free'?t('list.free'):p.billing.interval==='usage'?t('list.usageBased'):t('record.variableQuota');}
 function price(row:Row){
  const p=row.plan,q=row.quote;
  if(p.billing.priceLabel)return td(p.billing.priceLabel);

@@ -1,11 +1,14 @@
 import type {ValueQuote} from './value';
 
-export const RANKING_VERSION='fair-value-3';
+export const RANKING_VERSION='fair-value-4';
 export const RANKING_WEIGHTS={efficiency:0.6,ability:0.4} as const;
 export function tokenEfficiency(q:ValueQuote){
   if(q.dataStatus==='historical')return null;
   const n=q.calculation.millionTokens,cash=q.calculation.cash;
-  return n!==null&&Number.isFinite(n)&&n>0&&cash>0?n/cash:null;
+  if(n===null||!Number.isFinite(n)||n<=0||cash<=0)return null;
+  // Standard profile does not count cached tokens toward usage (method rule 1).
+  const usable=q.calculation.profile==='cached'?n:n*(1-(q.calculation.cachedInputShare??0));
+  return usable/cash;
 }
 export function abilityPercentile(q:ValueQuote){
   const b=q.benchmark;

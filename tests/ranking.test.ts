@@ -20,6 +20,13 @@ test('official list-price inflation cannot inflate the comprehensive score',()=>
  const a=fixture(),b=structuredClone(a);b.multiplier*=100;b.calculation.equivalentUSD*=100;
  const ref=efficiencyReference([a,b]);assert.deepEqual(recommendation(a,ref),recommendation(b,ref));
 });
+test('cached tokens do not inflate standard-profile efficiency',()=>{
+ const a=fixture(),b=structuredClone(a);
+ a.calculation.cachedInputShare=0.9;b.calculation.cachedInputShare=0;
+ const ref=efficiencyReference([a,b]);assert.ok(recommendation(b,ref).score!>recommendation(a,ref).score!);
+ a.calculation.profile='cached';b.calculation.profile='cached';
+ const refCached=efficiencyReference([a,b]);assert.equal(recommendation(a,refCached).score,recommendation(b,refCached).score);
+});
 test('duplicate offers do not manipulate price percentiles',()=>{
  const a=fixture(),b=structuredClone(a);b.calculation.millionTokens=b.calculation.millionTokens!*2;
  assert.deepEqual(efficiencyReference([a,b]),efficiencyReference([a,b,a,b,b]));
